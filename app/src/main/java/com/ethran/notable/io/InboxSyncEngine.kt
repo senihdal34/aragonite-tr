@@ -169,21 +169,32 @@ object InboxSyncEngine {
             File(Environment.getExternalStorageDirectory(), inboxPath)
         }
 
+        // Generate a unique base name from the recognized text + timestamp
+        val timestamp = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US).format(page.createdAt)
+        val titleLine = finalContent.lines().firstOrNull()?.trim()?.take(50)
+            ?.replace(Regex("[/\\\\:*?\"<>|]"), "-")
+            ?.replace(Regex("\\s+"), " ")?.trim()
+        val baseName = if (!titleLine.isNullOrBlank()) {
+            "$titleLine-$timestamp"
+        } else {
+            timestamp
+        }
+
         // Sub-directories for attachments
         val jpgDir = File(noteDir, "jpg_archive").also { it.mkdirs() }
         val sb1Dir = File(noteDir, "sb1_archive").also { it.mkdirs() }
 
-        // Phase 2: Render JPG into jpg_archive/
+        // Phase 2: Render JPG into jpg_archive/ with unique name
         try {
-            val jpgFile = File(jpgDir, "page-1.jpg")
+            val jpgFile = File(jpgDir, "${baseName}-page-1.jpg")
             writePageJpg(exportEngine, pageId, jpgFile)
         } catch (e: Exception) {
             log.e("Failed to render page JPG: ${e.message}", e)
         }
 
-        // Phase 1: Write SB1 container into sb1_archive/
+        // Phase 1: Write SB1 container into sb1_archive/ with unique name
         try {
-            val sb1File = File(sb1Dir, "page-1.sb1")
+            val sb1File = File(sb1Dir, "${baseName}-page-1.sb1")
             Sb1ContainerWriter.writeSb1Container(
                 file = sb1File,
                 page = page,
@@ -197,8 +208,9 @@ object InboxSyncEngine {
         }
 
         // Generate and write markdown LAST (its presence signals sync completion to Obsidian file watchers)
-        val markdown = generateMarkdown(createdDate, tags, finalContent)
-        writeMarkdownFile(markdown, page.createdAt, noteDir, finalContent)
+        // Pages always 1 for single-page inbox sync; multi-page would need iteration
+        val markdown = generateMarkdown(createdDate, tags, finalContent, pages = 1, baseName = baseName)
+        writeMarkdownFile(markdown, noteDir, baseName)
 
         log.i("Inbox sync complete for page $pageId")
     }
@@ -327,7 +339,8 @@ object InboxSyncEngine {
         tags: List<String>,
         content: String,
         pages: Int = 1,
-        source: String = "aragonite"
+        source: String = "aragonite",
+        baseName: String = "page"
     ): String {
         val sb = StringBuilder()
         sb.appendLine("---")
@@ -344,7 +357,7 @@ object InboxSyncEngine {
         sb.appendLine()
         sb.appendLine("---")
         for (i in 1..pages) {
-            sb.appendLine("![[jpg_archive/page-$i.jpg]]")
+            sb.appendLine("![[jpg_archive/${baseName}-page-$i.jpg]]")
         }
         return sb.toString()
     }
@@ -367,18 +380,8 @@ object InboxSyncEngine {
         return noteDir
     }
 
-    private fun writeMarkdownFile(markdown: String, createdAt: Date, noteDir: File, recognizedText: String) {
-        val timestamp = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US).format(createdAt)
-        // Use first line of recognized text as title (max 50 chars, sanitized)
-        val titleLine = recognizedText.lines().firstOrNull()?.trim()?.take(50)
-            ?.replace(Regex("[/\\\\:*?\"<>|]"), "-")
-            ?.replace(Regex("\\s+"), " ")?.trim()
-        val fileName = if (!titleLine.isNullOrBlank()) {
-            "$titleLine-$timestamp.md"
-        } else {
-            "$timestamp.md"
-        }
-        val file = File(noteDir, fileName)
+    private fun writeMarkdownFile(markdown: String, noteDir: File, baseName: String) {
+        val file = File(noteDir, "$baseName.md")
         file.writeText(markdown)
         log.i("Written inbox note to ${file.absolutePath}")
     }

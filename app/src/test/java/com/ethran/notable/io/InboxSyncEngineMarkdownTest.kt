@@ -60,7 +60,7 @@ class InboxSyncEngineMarkdownTest {
         )
 
         // Verify the separator and embed format
-        assertContains(result, "\n---\n![[page-1.jpg]]\n")
+        assertContains(result, "\n---\n![[jpg_archive/page-1.jpg]]\n")
     }
 
     /**
@@ -94,14 +94,14 @@ class InboxSyncEngineMarkdownTest {
         )
 
         // Verify all page embeds are present
-        assertContains(result, "![[page-1.jpg]]")
-        assertContains(result, "![[page-2.jpg]]")
-        assertContains(result, "![[page-3.jpg]]")
+        assertContains(result, "![[jpg_archive/page-1.jpg]]")
+        assertContains(result, "![[jpg_archive/page-2.jpg]]")
+        assertContains(result, "![[jpg_archive/page-3.jpg]]")
 
         // Verify they appear in order
-        val page1Index = result.indexOf("![[page-1.jpg]]")
-        val page2Index = result.indexOf("![[page-2.jpg]]")
-        val page3Index = result.indexOf("![[page-3.jpg]]")
+        val page1Index = result.indexOf("![[jpg_archive/page-1.jpg]]")
+        val page2Index = result.indexOf("![[jpg_archive/page-2.jpg]]")
+        val page3Index = result.indexOf("![[jpg_archive/page-3.jpg]]")
         assertEquals(true, page1Index < page2Index && page2Index < page3Index,
             "Page embeds should appear in ascending order")
     }
@@ -196,7 +196,7 @@ class InboxSyncEngineMarkdownTest {
         assertContains(result, "[[Sarah]]")
 
         // Multiple page embeds
-        assertContains(result, "![[page-1.jpg]]")
-        assertContains(result, "![[page-2.jpg]]")
+        assertContains(result, "![[jpg_archive/page-1.jpg]]")
+        assertContains(result, "![[jpg_archive/page-2.jpg]]")
     }
 }
