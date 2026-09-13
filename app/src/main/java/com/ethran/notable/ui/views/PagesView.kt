@@ -98,7 +98,8 @@ fun PagesView(
         onReorder = { id, to -> viewModel.reorderPage(bookId, id, to) },
         onDeletePage = viewModel::deletePage,
         onDuplicatePage = viewModel::duplicatePage,
-        onAddPageAfter = { viewModel.newPageInBook(bookId, it) }
+        onAddPageAfter = { viewModel.newPageInBook(bookId, it) },
+        onPinToggle = viewModel::togglePin
     )
 }
 
@@ -112,7 +113,8 @@ fun PagesContent(
     onReorder: (String, Int) -> Unit,
     onDeletePage: (String) -> Unit,
     onDuplicatePage: (String) -> Unit,
-    onAddPageAfter: (Int) -> Unit
+    onAddPageAfter: (Int) -> Unit,
+    onPinToggle: (String) -> Unit = {}
 ) {
     if (state.isLoading) return
 
@@ -232,7 +234,7 @@ fun PagesContent(
                                 onAddPageAfter(pageIndex + 1)
                             },
                             pinned = false, // visual state TBD — MVP: always shows "Pin"
-                            onPinToggle = { viewModel.togglePin(pageId) }
+                            onPinToggle = { onPinToggle(pageId) }
                         )
                     }
                 }
