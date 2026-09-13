@@ -158,12 +158,12 @@ object InboxSyncEngine {
 
         val finalContent = fullText
 
-        // --- Attachment writes (Phases 1-3 integration) ---
+        // --- Attachment writes ---
         val inboxPath = GlobalAppSettings.current.obsidianInboxPath
         val createdDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(page.createdAt)
 
-        // Create per-note folder first (Phase 3 helper)
-        val noteDir = resolveNoteDir(page.createdAt, inboxPath)
+        // Use inboxPath directly (no per-note subfolder)
+        val noteDir = File(if (inboxPath.startsWith("/")) inboxPath else File(Environment.getExternalStorageDirectory(), inboxPath))
 
         // Phase 2: Render JPG (graceful degradation — AC1.3)
         try {
@@ -190,7 +190,7 @@ object InboxSyncEngine {
 
         // Generate and write markdown LAST (its presence signals sync completion to Obsidian file watchers)
         val markdown = generateMarkdown(createdDate, tags, finalContent)
-        writeMarkdownFile(markdown, page.createdAt, noteDir)
+        writeMarkdownFile(markdown, page.createdAt, noteDir, finalContent)
 
         log.i("Inbox sync complete for page $pageId")
     }
@@ -359,9 +359,17 @@ object InboxSyncEngine {
         return noteDir
     }
 
-    private fun writeMarkdownFile(markdown: String, createdAt: Date, noteDir: File) {
+    private fun writeMarkdownFile(markdown: String, createdAt: Date, noteDir: File, recognizedText: String) {
         val timestamp = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US).format(createdAt)
-        val fileName = "$timestamp.md"
+        // Use first line of recognized text as title (max 50 chars, sanitized)
+        val titleLine = recognizedText.lines().firstOrNull()?.trim()?.take(50)
+            ?.replace(Regex("[/\\\\:*?\"<>|]"), "-")
+            ?.replace(Regex("\\s+"), " ")?.trim()
+        val fileName = if (!titleLine.isNullOrBlank()) {
+            "$titleLine-$timestamp.md"
+        } else {
+            "$timestamp.md"
+        }
         val file = File(noteDir, fileName)
         file.writeText(markdown)
         log.i("Written inbox note to ${file.absolutePath}")
