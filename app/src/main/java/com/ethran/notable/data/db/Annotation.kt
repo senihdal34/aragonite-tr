@@ -78,4 +78,8 @@ class AnnotationRepository @Inject constructor(
     suspend fun deleteAll(ids: List<String>) = db.deleteAll(ids)
     suspend fun getByPageId(pageId: String): List<Annotation> = db.getByPageId(pageId)
     suspend fun getById(annotationId: String): Annotation? = db.getById(annotationId)
+
+    // --- Home screen tag queries ---
+    suspend fun getDistinctTags(): List<String> = db.getDistinctTags()
+    suspend fun getPageIdsByTag(tag: String): List<String> = db.getPageIdsByTag(tag)
 }
