@@ -69,7 +69,7 @@ val MIGRATION_35_36 = object : Migration(35, 36) {
         if ("text" !in annotCols) {
             db.execSQL("ALTER TABLE Annotation ADD COLUMN text TEXT NOT NULL DEFAULT ''")
         }
-        db.execSQL("CREATE TABLE IF NOT EXISTS tag_priority (tagName TEXT PRIMARY KEY, sortOrder INTEGER NOT NULL DEFAULT 0)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS tag_priority (tagName TEXT NOT NULL PRIMARY KEY, sortOrder INTEGER NOT NULL DEFAULT 0)")
     }
 }
 
