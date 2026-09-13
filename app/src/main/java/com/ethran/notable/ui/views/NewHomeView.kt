@@ -60,6 +60,14 @@ fun HomeView(
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    // Refresh data when returning from Editor
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+            viewModel.refresh()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -116,24 +124,24 @@ fun HomeView(
         }
 
         // Topics Section
+        Spacer(Modifier.height(16.dp))
+        SectionTitle("# Konular")
+        // Add tag input — always visible
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val input by viewModel.inputTag.collectAsState()
+            TopicInput(value = input, onValueChange = { viewModel.setInputTag(it) })
+            Text("➕", modifier = Modifier.clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { viewModel.addTag(input) })
+        }
         if (state.topicGroups.isNotEmpty()) {
-            Spacer(Modifier.height(16.dp))
-            SectionTitle("# Konular")
-            // Add tag input
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val input by viewModel.inputTag.collectAsState()
-                TopicInput(value = input, onValueChange = { viewModel.setInputTag(it) })
-                Text("➕", modifier = Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { viewModel.addTag(input) })
-            }
             state.topicGroups.forEach { group ->
                 TopicGroupHeader(tag = group.tag, count = group.pages.size, onRemove = { viewModel.removeTag(group.tag) })
                 group.pages.forEach { page ->
@@ -143,6 +151,13 @@ fun HomeView(
                     )
                 }
             }
+        } else {
+            Text(
+                "Henüz konu yok",
+                fontSize = 12.sp,
+                color = Color(0xFFAAAAAA),
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
         }
 
         // Loading state
