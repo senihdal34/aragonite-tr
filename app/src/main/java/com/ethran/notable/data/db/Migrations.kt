@@ -58,6 +58,7 @@ val MIGRATION_35_36 = object : Migration(35, 36) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE Page ADD COLUMN title TEXT NOT NULL DEFAULT ''")
         db.execSQL("ALTER TABLE Page ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE Annotation ADD COLUMN text TEXT NOT NULL DEFAULT ''")
         db.execSQL("CREATE TABLE IF NOT EXISTS tag_priority (tagName TEXT PRIMARY KEY, sortOrder INTEGER NOT NULL DEFAULT 0)")
     }
 }

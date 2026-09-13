@@ -40,7 +40,10 @@ data class Annotation(
     val pageId: String,
 
     val createdAt: Date = Date(),
-    val updatedAt: Date = Date()
+    val updatedAt: Date = Date(),
+
+    @ColumnInfo(defaultValue = "")
+    val text: String = ""
 )
 
 @Dao
@@ -62,6 +65,9 @@ interface AnnotationDao {
     @Query("SELECT * FROM Annotation WHERE id = :annotationId")
     suspend fun getById(annotationId: String): Annotation?
 
+    @Update
+    suspend fun update(annotation: Annotation)
+
     // --- Tag queries for Home screen ---
     @Query("SELECT DISTINCT text FROM Annotation WHERE type = 'TAG' ORDER BY text ASC")
     suspend fun getDistinctTags(): List<String>
@@ -78,6 +84,7 @@ class AnnotationRepository @Inject constructor(
     suspend fun deleteAll(ids: List<String>) = db.deleteAll(ids)
     suspend fun getByPageId(pageId: String): List<Annotation> = db.getByPageId(pageId)
     suspend fun getById(annotationId: String): Annotation? = db.getById(annotationId)
+    suspend fun update(annotation: Annotation) = db.update(annotation)
 
     // --- Home screen tag queries ---
     suspend fun getDistinctTags(): List<String> = db.getDistinctTags()
