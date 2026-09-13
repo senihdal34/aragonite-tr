@@ -54,7 +54,13 @@ class AutoMigration31to32 : AutoMigrationSpec
 
 
 
-// Migration 32 -> 33:
+val MIGRATION_35_36 = object : Migration(35, 36) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE Page ADD COLUMN title TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE Page ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("CREATE TABLE IF NOT EXISTS tag_priority (tagName TEXT PRIMARY KEY, sortOrder INTEGER NOT NULL DEFAULT 0)")
+    }
+}
 // 1. Rename original Stroke table to stroke_old
 // 2. Drop any carried indexes from old table (index_Stroke_pageId)
 // 3. Create new Stroke table (with points as BLOB and color default)

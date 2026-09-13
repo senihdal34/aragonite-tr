@@ -11,6 +11,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.ethran.notable.data.AppRepository
 import com.ethran.notable.data.datastore.EditorSettingCacheManager
 import com.ethran.notable.editor.EditorDestination
@@ -28,6 +29,8 @@ import com.ethran.notable.ui.views.SystemInformationDestination
 import com.ethran.notable.ui.views.SystemInformationView
 import com.ethran.notable.ui.views.WelcomeDestination
 import com.ethran.notable.ui.views.WelcomeView
+import com.ethran.notable.ui.views.HomeDestination
+import com.ethran.notable.ui.views.HomeView
 
 
 @Composable
@@ -141,6 +144,17 @@ fun NotableNavHost(
                 route = BugReportDestination.route,
             ) {
                 BugReportScreen(goBack = { appNavigator.goBack() })
+                appNavigator.cleanCurrentPageId()
+            }
+            composable(
+                route = HomeDestination.route,
+            ) {
+                val viewModel: HomeViewModel = hiltViewModel()
+                HomeView(
+                    viewModel = viewModel,
+                    onOpenPage = { pageId -> appNavigator.navController.navigate("editor/$pageId") },
+                    onSettings = { appNavigator.navController.navigate(SettingsDestination.route) }
+                )
                 appNavigator.cleanCurrentPageId()
             }
         }

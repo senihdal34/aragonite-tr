@@ -6,9 +6,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -25,7 +27,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import compose.icons.FeatherIcons
 import compose.icons.feathericons.Copy
 import compose.icons.feathericons.PlusCircle
@@ -44,66 +48,82 @@ fun PageCard(
     modifier: Modifier = Modifier,
     touchModifier: Modifier = Modifier,
     isReorderDragging: Boolean = false,
+    title: String = "",  // optional title, shown below thumbnail
 ) {
-    Box(modifier = modifier) {
-        PagePreview(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(3f / 4f)
-                .border(if (isOpen) 2.dp else 1.dp, Color.Black, RectangleShape)
-                .clickable(
-                    enabled = isReorderDragging,
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { onOpen() }
-                .then(touchModifier), pageId
-        )
-
-        // Current page header styling
-        if (isOpen) {
-            Row(
+    Column(modifier = modifier) {
+        Box {
+            PagePreview(
                 modifier = Modifier
-                    .align(Alignment.TopStart)
                     .fillMaxWidth()
-                    .background(Color.Black)
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Spacer(modifier = Modifier.weight(1f))
-                Text(text = (pageIndex + 1).toString(), color = Color.White)
-            }
-        } else {
-            Text(
-                text = (pageIndex + 1).toString(),
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(6.dp)
-                    .background(Color.Black)
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
-                color = Color.White
+                    .aspectRatio(3f / 4f)
+                    .border(if (isOpen) 2.dp else 1.dp, Color.Black, RectangleShape)
+                    .clickable(
+                        enabled = isReorderDragging,
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onOpen() }
+                    .then(touchModifier), pageId
             )
-        }
-        if (isEditMode) {
-            // Bottom-right actions
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(14.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconPill(icon = FeatherIcons.Trash, contentDesc = "Delete page") {
-                    onDelete()
-                }
-                IconPill(icon = FeatherIcons.Copy, contentDesc = "Duplicate page") {
-                    onDuplicate()
-                }
-                IconPill(
-                    icon = FeatherIcons.PlusCircle, contentDesc = "Add page after"
+
+            // Current page header styling
+            if (isOpen) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .background(Color.Black)
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    onAddAfter()
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(text = (pageIndex + 1).toString(), color = Color.White)
+                }
+            } else {
+                Text(
+                    text = (pageIndex + 1).toString(),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .background(Color.Black)
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                    color = Color.White
+                )
+            }
+            if (isEditMode) {
+                // Bottom-right actions
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconPill(icon = FeatherIcons.Trash, contentDesc = "Delete page") {
+                        onDelete()
+                    }
+                    IconPill(icon = FeatherIcons.Copy, contentDesc = "Duplicate page") {
+                        onDuplicate()
+                    }
+                    IconPill(
+                        icon = FeatherIcons.PlusCircle, contentDesc = "Add page after"
+                    ) {
+                        onAddAfter()
+                    }
                 }
             }
+        }
+        // Title below thumbnail
+        if (title.isNotBlank()) {
+            Text(
+                text = title,
+                fontSize = 11.sp,
+                color = Color(0xFF333333),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, start = 2.dp, end = 2.dp)
+            )
         }
     }
 }

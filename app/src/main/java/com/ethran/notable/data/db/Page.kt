@@ -36,7 +36,9 @@ data class Page(
     @ColumnInfo(defaultValue = "blank") val background: String = "blank", // path or native subtype
     @ColumnInfo(defaultValue = "native") val backgroundType: String = "native", // image, imageRepeating, coverImage, native
     @ColumnInfo(index = true) val parentFolderId: String? = null,
-    val createdAt: Date = Date(), val updatedAt: Date = Date()
+    val createdAt: Date = Date(), val updatedAt: Date = Date(),
+    @ColumnInfo(defaultValue = "") val title: String = "",
+    @ColumnInfo(defaultValue = "0") val pinned: Int = 0
 )
 
 data class PageWithStrokes(
@@ -74,6 +76,19 @@ interface PageDao {
 
     @Query("SELECT * FROM page WHERE notebookId is null AND parentFolderId is :folderId")
     fun getSinglePagesInFolder(folderId: String? = null): LiveData<List<Page>>
+
+    // --- Home screen queries ---
+    @Query("SELECT * FROM page WHERE pinned = 1 ORDER BY updatedAt DESC")
+    fun getPinnedPages(): LiveData<List<Page>>
+
+    @Query("SELECT * FROM page WHERE pinned = 0 ORDER BY createdAt DESC LIMIT :limit")
+    fun getRecentPages(limit: Int = 10): LiveData<List<Page>>
+
+    @Query("UPDATE page SET title = :title WHERE id = :pageId")
+    suspend fun updateTitle(pageId: String, title: String)
+
+    @Query("UPDATE page SET pinned = :pinned WHERE id = :pageId")
+    suspend fun setPinned(pageId: String, pinned: Int)
 
     @Insert
     suspend fun create(page: Page): Long
@@ -116,6 +131,23 @@ class PageRepository @Inject constructor(
 
     fun getSinglePagesInFolder(folderId: String? = null): LiveData<List<Page>> {
         return db.getSinglePagesInFolder(folderId)
+    }
+
+    // --- Home screen ---
+    fun getPinnedPages(): LiveData<List<Page>> {
+        return db.getPinnedPages()
+    }
+
+    fun getRecentPages(limit: Int = 10): LiveData<List<Page>> {
+        return db.getRecentPages(limit)
+    }
+
+    suspend fun updateTitle(pageId: String, title: String) {
+        db.updateTitle(pageId, title)
+    }
+
+    suspend fun setPinned(pageId: String, pinned: Boolean) {
+        db.setPinned(pageId, if (pinned) 1 else 0)
     }
 
     suspend fun update(page: Page) {

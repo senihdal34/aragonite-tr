@@ -53,8 +53,8 @@ class Converters {
 
 
 @Database(
-    entities = [Folder::class, Notebook::class, Page::class, Stroke::class, Image::class, Kv::class, Annotation::class],
-    version = 35,
+    entities = [Folder::class, Notebook::class, Page::class, Stroke::class, Image::class, Kv::class, Annotation::class, TagPriority::class],
+    version = 36,
     autoMigrations = [
         AutoMigration(19, 20),
         AutoMigration(20, 21),
@@ -83,6 +83,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun strokeDao(): StrokeDao
     abstract fun ImageDao(): ImageDao
     abstract fun annotationDao(): AnnotationDao
+    abstract fun tagPriorityDao(): TagPriorityDao
 
 //    companion object {
 //        private var INSTANCE: AppDatabase? = null
@@ -134,7 +135,8 @@ object DatabaseModule {
                 MIGRATION_16_17,
                 MIGRATION_17_18,
                 MIGRATION_22_23,
-                MIGRATION_32_33
+                MIGRATION_32_33,
+                MIGRATION_35_36
             )
             .build()
     }
@@ -162,6 +164,10 @@ object DatabaseModule {
     @Provides
     fun provideImageDao(db: AppDatabase): ImageDao =
         db.ImageDao()
+
+    @Provides
+    fun provideTagPriorityDao(db: AppDatabase): TagPriorityDao =
+        db.tagPriorityDao()
 
     @Provides
     fun provideAnnotationDao(db: AppDatabase): AnnotationDao =

@@ -212,6 +212,18 @@ object InboxSyncEngine {
         val markdown = generateMarkdown(createdDate, tags, finalContent, pages = 1, baseName = baseName)
         writeMarkdownFile(markdown, noteDir, baseName)
 
+        // Save recognized title back to the Page entity for Home screen display
+        val titleLine = finalContent.lines().firstOrNull()?.trim()?.take(50)
+            ?.replace(Regex("[/\\\\:*?\"<>|]"), "-")
+            ?.replace(Regex("\\s+"), " ")?.trim()
+        if (!titleLine.isNullOrBlank()) {
+            try {
+                appRepository.pageRepository.updateTitle(pageId, titleLine)
+            } catch (e: Exception) {
+                log.e("Failed to save title for page $pageId: ${e.message}")
+            }
+        }
+
         log.i("Inbox sync complete for page $pageId")
     }
 

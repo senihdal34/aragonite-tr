@@ -61,6 +61,13 @@ interface AnnotationDao {
     @Transaction
     @Query("SELECT * FROM Annotation WHERE id = :annotationId")
     suspend fun getById(annotationId: String): Annotation?
+
+    // --- Tag queries for Home screen ---
+    @Query("SELECT DISTINCT text FROM Annotation WHERE type = 'TAG' ORDER BY text ASC")
+    suspend fun getDistinctTags(): List<String>
+
+    @Query("SELECT DISTINCT pageId FROM Annotation WHERE type = 'TAG' AND text = :tag")
+    suspend fun getPageIdsByTag(tag: String): List<String>
 }
 
 class AnnotationRepository @Inject constructor(
