@@ -213,9 +213,6 @@ object InboxSyncEngine {
         writeMarkdownFile(markdown, noteDir, baseName)
 
         // Save recognized title back to the Page entity for Home screen display
-        val titleLine = finalContent.lines().firstOrNull()?.trim()?.take(50)
-            ?.replace(Regex("[/\\\\:*?\"<>|]"), "-")
-            ?.replace(Regex("\\s+"), " ")?.trim()
         if (!titleLine.isNullOrBlank()) {
             try {
                 appRepository.pageRepository.updateTitle(pageId, titleLine)
