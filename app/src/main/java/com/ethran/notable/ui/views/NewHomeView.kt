@@ -20,8 +20,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
+import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,7 +55,8 @@ object HomeDestination : NavigationDestination {
 fun HomeView(
     viewModel: HomeViewModel,
     onOpenPage: (String) -> Unit,
-    onSettings: () -> Unit
+    onSettings: () -> Unit,
+    onCreateNewPage: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -69,10 +74,16 @@ fun HomeView(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Notlar", fontSize = 20.sp, color = Color(0xFF1A1A1A))
-            Text("⚙️", modifier = Modifier.clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { onSettings() })
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("➕", modifier = Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onCreateNewPage() })
+                Text("⚙️", modifier = Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onSettings() })
+            }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -108,8 +119,23 @@ fun HomeView(
         if (state.topicGroups.isNotEmpty()) {
             Spacer(Modifier.height(16.dp))
             SectionTitle("# Konular")
+            // Add tag input
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val input by viewModel.inputTag.collectAsState()
+                TopicInput(value = input, onValueChange = { viewModel.setInputTag(it) })
+                Text("➕", modifier = Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { viewModel.addTag(input) })
+            }
             state.topicGroups.forEach { group ->
-                TopicGroupHeader(tag = group.tag, count = group.pages.size)
+                TopicGroupHeader(tag = group.tag, count = group.pages.size, onRemove = { viewModel.removeTag(group.tag) })
                 group.pages.forEach { page ->
                     NoteRow(
                         page = page,
@@ -282,7 +308,7 @@ private fun NoteRow(
 }
 
 @Composable
-private fun TopicGroupHeader(tag: String, count: Int) {
+private fun TopicGroupHeader(tag: String, count: Int, onRemove: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -294,7 +320,32 @@ private fun TopicGroupHeader(tag: String, count: Int) {
         Text(tag, fontSize = 12.sp, color = Color(0xFF555555))
         Spacer(Modifier.width(8.dp))
         Text("$count not", fontSize = 10.sp, color = Color(0xFFAAAAAA))
+        Spacer(Modifier.weight(1f))
+        Text("✕", modifier = Modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null
+        ) { onRemove() }, fontSize = 12.sp, color = Color(0xFFCCCCCC))
     }
+}
+
+@Composable
+private fun TopicInput(value: String, onValueChange: (String) -> Unit) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = { Text("yeni konu...", fontSize = 12.sp, color = Color(0xFFBBBBBB)) },
+        modifier = Modifier
+            .height(36.dp)
+            .weight(1f),
+        singleLine = true,
+        colors = TextFieldDefaults.textFieldColors(
+            textColor = Color(0xFF333333),
+            backgroundColor = Color(0xFFF0EEEC),
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent
+        ),
+        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)
+    )
 }
 
 /** Format a Date as "dd MMM HH:mm" (e.g. "13 Eyl 14:30") */

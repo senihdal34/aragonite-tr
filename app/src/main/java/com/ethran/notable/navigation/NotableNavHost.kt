@@ -154,7 +154,8 @@ fun NotableNavHost(
                 HomeView(
                     viewModel = viewModel,
                     onOpenPage = { pageId -> appNavigator.navController.navigate("editor/$pageId") },
-                    onSettings = { appNavigator.navController.navigate(SettingsDestination.route) }
+                    onSettings = { appNavigator.navController.navigate(SettingsDestination.route) },
+                    onCreateNewPage = { appNavigator.onCreateNewQuickPage(appRepository, null) }
                 )
                 appNavigator.cleanCurrentPageId()
             }
