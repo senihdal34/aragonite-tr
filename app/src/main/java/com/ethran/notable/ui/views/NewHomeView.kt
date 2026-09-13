@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -337,7 +336,7 @@ private fun TopicInput(value: String, onValueChange: (String) -> Unit) {
         placeholder = { Text("yeni konu...", fontSize = 12.sp, color = Color(0xFFBBBBBB)) },
         modifier = Modifier
             .height(36.dp)
-            .weight(1f),
+            .fillMaxWidth(0.7f),
         singleLine = true,
         colors = TextFieldDefaults.textFieldColors(
             textColor = Color(0xFF333333),
