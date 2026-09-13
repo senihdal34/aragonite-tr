@@ -8,6 +8,7 @@ import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Update
 import java.util.Date
 import java.util.UUID
 import javax.inject.Inject
@@ -66,7 +67,7 @@ interface AnnotationDao {
     suspend fun getById(annotationId: String): Annotation?
 
     @Update
-    suspend fun update(annotation: Annotation)
+    suspend fun update(entity: Annotation)
 
     // --- Tag queries for Home screen ---
     @Query("SELECT DISTINCT text FROM Annotation WHERE type = 'TAG' ORDER BY text ASC")
@@ -84,7 +85,7 @@ class AnnotationRepository @Inject constructor(
     suspend fun deleteAll(ids: List<String>) = db.deleteAll(ids)
     suspend fun getByPageId(pageId: String): List<Annotation> = db.getByPageId(pageId)
     suspend fun getById(annotationId: String): Annotation? = db.getById(annotationId)
-    suspend fun update(annotation: Annotation) = db.update(annotation)
+    suspend fun update(entity: Annotation) = db.update(entity)
 
     // --- Home screen tag queries ---
     suspend fun getDistinctTags(): List<String> = db.getDistinctTags()
