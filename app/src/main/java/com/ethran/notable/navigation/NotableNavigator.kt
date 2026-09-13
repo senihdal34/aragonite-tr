@@ -108,6 +108,12 @@ class NotableNavigator(
         }
     }
 
+    fun goToHome() {
+        navController.navigate(HomeDestination.route) {
+            popUpTo(0) { inclusive = true }
+        }
+    }
+
     fun goToLibrary(folderId: String?) {
         navController.navigate(LibraryDestination.createRoute(folderId))
     }
