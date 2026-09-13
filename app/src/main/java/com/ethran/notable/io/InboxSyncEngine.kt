@@ -169,17 +169,21 @@ object InboxSyncEngine {
             File(Environment.getExternalStorageDirectory(), inboxPath)
         }
 
-        // Phase 2: Render JPG (graceful degradation — AC1.3)
+        // Sub-directories for attachments
+        val jpgDir = File(noteDir, "jpg_archive").also { it.mkdirs() }
+        val sb1Dir = File(noteDir, "sb1_archive").also { it.mkdirs() }
+
+        // Phase 2: Render JPG into jpg_archive/
         try {
-            val jpgFile = File(noteDir, "page-1.jpg")
+            val jpgFile = File(jpgDir, "page-1.jpg")
             writePageJpg(exportEngine, pageId, jpgFile)
         } catch (e: Exception) {
             log.e("Failed to render page JPG: ${e.message}", e)
         }
 
-        // Phase 1: Write SB1 container (graceful degradation — AC1.4)
+        // Phase 1: Write SB1 container into sb1_archive/
         try {
-            val sb1File = File(noteDir, "page-1.sb1")
+            val sb1File = File(sb1Dir, "page-1.sb1")
             Sb1ContainerWriter.writeSb1Container(
                 file = sb1File,
                 page = page,
@@ -340,7 +344,7 @@ object InboxSyncEngine {
         sb.appendLine()
         sb.appendLine("---")
         for (i in 1..pages) {
-            sb.appendLine("![[page-$i.jpg]]")
+            sb.appendLine("![[jpg_archive/page-$i.jpg]]")
         }
         return sb.toString()
     }
