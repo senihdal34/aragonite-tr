@@ -1,6 +1,10 @@
 package com.ethran.notable.ui.views
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.ethran.notable.navigation.NavigationDestination
@@ -19,7 +23,7 @@ object LibraryDestination : NavigationDestination {
 
 /**
  * Library composable — the original book/folder list screen.
- * Kept unchanged for editor navigation compatibility.
+ * Kept as a stub for navigation compatibility.
  */
 @Composable
 fun Library(
@@ -29,8 +33,5 @@ fun Library(
     onCreateNewQuickPage: (String?) -> Unit,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
-    // Placeholder: redirect the user to HomeView if they end up here
-    // The original Library is no longer the start destination.
-    // Full library implementation preserved in LibraryViewModel.
-    androidx.compose.material.Text("Library", modifier = androidx.compose.ui.Modifier.padding(16.dp))
+    Text("Library", modifier = Modifier.padding(16.dp))
 }

@@ -16,6 +16,7 @@ import com.ethran.notable.data.datastore.GlobalAppSettings
 import com.ethran.notable.editor.EditorDestination
 import com.ethran.notable.editor.canvas.CanvasEventBus
 import com.ethran.notable.editor.utils.refreshScreen
+import com.ethran.notable.ui.views.HomeDestination
 import com.ethran.notable.ui.views.LibraryDestination
 import com.ethran.notable.ui.views.SystemInformationDestination
 import com.ethran.notable.ui.views.WelcomeDestination

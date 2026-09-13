@@ -31,6 +31,7 @@ import com.ethran.notable.ui.views.WelcomeDestination
 import com.ethran.notable.ui.views.WelcomeView
 import com.ethran.notable.ui.views.HomeDestination
 import com.ethran.notable.ui.views.HomeView
+import com.ethran.notable.ui.viewmodels.HomeViewModel
 
 
 @Composable
