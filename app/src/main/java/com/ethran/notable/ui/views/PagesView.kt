@@ -230,7 +230,9 @@ fun PagesContent(
                             onDuplicate = { onDuplicatePage(pageId) },
                             onAddAfter = {
                                 onAddPageAfter(pageIndex + 1)
-                            }
+                            },
+                            pinned = false, // visual state TBD — MVP: always shows "Pin"
+                            onPinToggle = { viewModel.togglePin(pageId) }
                         )
                     }
                 }

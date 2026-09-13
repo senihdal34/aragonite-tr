@@ -45,6 +45,8 @@ fun PageCard(
     onDelete: () -> Unit,
     onDuplicate: () -> Unit,
     onAddAfter: () -> Unit,
+    pinned: Boolean = false,
+    onPinToggle: () -> Unit = {},
     modifier: Modifier = Modifier,
     touchModifier: Modifier = Modifier,
     isReorderDragging: Boolean = false,
@@ -103,6 +105,12 @@ fun PageCard(
                     }
                     IconPill(icon = FeatherIcons.Copy, contentDesc = "Duplicate page") {
                         onDuplicate()
+                    }
+                    IconPill(
+                        icon = FeatherIcons.PlusCircle,
+                        contentDesc = if (pinned) "Remove pin" else "Pin page"
+                    ) {
+                        onPinToggle()
                     }
                     IconPill(
                         icon = FeatherIcons.PlusCircle, contentDesc = "Add page after"

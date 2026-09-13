@@ -75,4 +75,11 @@ class PagesViewModel @Inject constructor(
             appRepository.newPageInBook(bookId, index)
         }
     }
+
+    fun togglePin(pageId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val page = appRepository.pageRepository.getById(pageId) ?: return@launch
+            appRepository.pageRepository.setPinned(pageId, page.pinned == 0)
+        }
+    }
 }
