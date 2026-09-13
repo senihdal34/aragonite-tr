@@ -20,13 +20,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,11 +36,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.ethran.notable.data.db.Page
 import com.ethran.notable.navigation.NavigationDestination
 import com.ethran.notable.ui.components.PagePreview
@@ -64,11 +64,17 @@ fun HomeView(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    // Refresh data when returning from Editor
+    // Refresh data when returning from Editor (on resume)
     val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(lifecycleOwner) {
-        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            viewModel.refresh()
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -216,7 +222,7 @@ private fun PinnedPageCard(
     onUnpin: () -> Unit
 ) {
     Column(modifier = Modifier.width(110.dp)) {
-        // Thumbnail area (3:4 ratio, ~147dp tall)
+        // Thumbnail area (3:4 ratio)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -231,7 +237,6 @@ private fun PinnedPageCard(
                 modifier = Modifier.fillMaxSize(),
                 pageId = page.id
             )
-            // Page number top-right
             Text(
                 "1",
                 modifier = Modifier
@@ -242,7 +247,7 @@ private fun PinnedPageCard(
                 color = Color.White,
                 fontSize = 9.sp
             )
-            // Unpin button top-left (touch target >= 40dp)
+            // Unpin button top-left
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -352,18 +357,19 @@ private fun TopicInput(value: String, onValueChange: (String) -> Unit) {
     TextField(
         value = value,
         onValueChange = onValueChange,
-        placeholder = { Text("yeni konu...", fontSize = 12.sp, color = Color(0xFFBBBBBB)) },
+        placeholder = { Text("yeni konu...", fontSize = 12.sp, color = Color(0xFF333333), style = TextStyle(color = Color(0xFF333333))) },
         modifier = Modifier
             .height(36.dp)
             .fillMaxWidth(0.7f),
         singleLine = true,
+        textStyle = TextStyle(color = Color(0xFF333333), fontSize = 12.sp),
         colors = TextFieldDefaults.textFieldColors(
             textColor = Color(0xFF333333),
-            backgroundColor = Color(0xFFF0EEEC),
+            backgroundColor = Color(0xFFE8E4DF),
             focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent
-        ),
-        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)
+            unfocusedIndicatorColor = Color.Transparent,
+            cursorColor = Color(0xFF555555)
+        )
     )
 }
 

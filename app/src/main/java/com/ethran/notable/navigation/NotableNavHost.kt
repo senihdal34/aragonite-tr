@@ -75,7 +75,7 @@ fun NotableNavHost(
                 route = WelcomeDestination.route,
             ) {
                 WelcomeView(
-                    goToLibrary = { appNavigator.goToLibrary(null) },
+                    goToLibrary = { appNavigator.goToHome() },
                 )
                 appNavigator.cleanCurrentPageId()
             }
