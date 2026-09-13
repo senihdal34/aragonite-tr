@@ -3,11 +3,11 @@ package com.ethran.notable.ui.views
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -16,11 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -43,8 +39,9 @@ import com.ethran.notable.navigation.NavigationDestination
 import com.ethran.notable.ui.components.PagePreview
 import com.ethran.notable.ui.viewmodels.HomeUiState
 import com.ethran.notable.ui.viewmodels.HomeViewModel
-import compose.icons.FeatherIcons
-import compose.icons.feathericons.X
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object HomeDestination : NavigationDestination {
     override val route = "home"
@@ -81,7 +78,7 @@ fun HomeView(
         Spacer(Modifier.height(16.dp))
 
         // Pinned Section
-        SectionHeader("📌 Sabitlenenler", if (state.pinnedPages.isNotEmpty()) "${state.pinnedPages.size}" else "")
+        SectionTitle("📌 Sabitlenenler")
         if (state.pinnedPages.isNotEmpty()) {
             PinnedSection(
                 pages = state.pinnedPages,
@@ -99,7 +96,7 @@ fun HomeView(
 
         // Recents Section
         Spacer(Modifier.height(16.dp))
-        SectionHeader("🕐 Son Notlar", if (state.recentPages.isNotEmpty()) "${state.recentPages.size}" else "")
+        SectionTitle("🕐 Son Notlar")
         state.recentPages.forEach { page ->
             NoteRow(
                 page = page,
@@ -110,7 +107,7 @@ fun HomeView(
         // Topics Section
         if (state.topicGroups.isNotEmpty()) {
             Spacer(Modifier.height(16.dp))
-            SectionHeader("# Konular", "")
+            SectionTitle("# Konular")
             state.topicGroups.forEach { group ->
                 TopicGroupHeader(tag = group.tag, count = group.pages.size)
                 group.pages.forEach { page ->
@@ -124,28 +121,25 @@ fun HomeView(
 
         // Loading state
         if (state.isLoading) {
-            Text("Yükleniyor...", fontSize = 12.sp, color = Color(0xFFAAAAAA))
+            Text(
+                "Yükleniyor...",
+                fontSize = 12.sp,
+                color = Color(0xFFAAAAAA),
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }
 
 @Composable
-private fun SectionHeader(title: String, count: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            title,
-            fontSize = 10.sp,
-            color = Color(0xFFAAAAAA),
-            letterSpacing = 0.6.sp
-        )
-        if (count.isNotBlank()) {
-            Text(count, fontSize = 10.sp, color = Color(0xFFCCCCCC))
-        }
-    }
+private fun SectionTitle(title: String) {
+    Text(
+        text = title,
+        fontSize = 10.sp,
+        color = Color(0xFFAAAAAA),
+        letterSpacing = 0.6.sp,
+        modifier = Modifier.padding(bottom = 4.dp)
+    )
 }
 
 @Composable
@@ -154,11 +148,13 @@ private fun PinnedSection(
     onOpenPage: (String) -> Unit,
     onUnpin: (String) -> Unit
 ) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(vertical = 8.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        items(pages) { page ->
+        pages.forEach { page ->
             PinnedPageCard(
                 page = page,
                 onClick = { onOpenPage(page.id) },
@@ -174,71 +170,65 @@ private fun PinnedPageCard(
     onClick: () -> Unit,
     onUnpin: () -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .width(110.dp)
-    ) {
-        Column {
-            // Thumbnail area (3:4 ratio)
+    Column(modifier = Modifier.width(110.dp)) {
+        // Thumbnail area (3:4 ratio, ~147dp tall)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(3f / 4f)
+                .border(1.dp, Color(0xFFD4CCC4), RectangleShape)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onClick() }
+        ) {
+            PagePreview(
+                modifier = Modifier.fillMaxSize(),
+                pageId = page.id
+            )
+            // Page number top-right
+            Text(
+                "1",
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .background(Color.Black)
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                color = Color.White,
+                fontSize = 9.sp
+            )
+            // Unpin button top-left (touch target >= 40dp)
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(3f / 4f)
-                    .border(1.dp, Color(0xFFD4CCC4), RectangleShape)
+                    .align(Alignment.TopStart)
+                    .padding(2.dp)
+                    .size(18.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color(0x99000000))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
-                    ) { onClick() }
+                    ) { onUnpin() },
+                contentAlignment = Alignment.Center
             ) {
-                PagePreview(
-                    modifier = Modifier.fillMaxSize(),
-                    pageId = page.id
-                )
-                // Page number top-right
                 Text(
-                    "1",
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(4.dp)
-                        .background(Color.Black)
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                    text = "✕",
                     color = Color.White,
-                    fontSize = 9.sp
+                    fontSize = 11.sp
                 )
-                // Unpin button top-left
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(2.dp)
-                        .size(18.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(Color(0x99000000))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { onUnpin() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = FeatherIcons.X,
-                        contentDescription = "Pini kaldır",
-                        tint = Color.White,
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
             }
-            // Title below thumbnail
-            Text(
-                text = page.title.ifBlank { "İsimsiz Not" },
-                fontSize = 11.sp,
-                color = Color(0xFF333333),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp, start = 2.dp, end = 2.dp)
-            )
         }
+        // Title below thumbnail
+        Text(
+            text = page.title.ifBlank { "İsimsiz Not" },
+            fontSize = 11.sp,
+            color = Color(0xFF333333),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp, start = 2.dp, end = 2.dp)
+        )
     }
 }
 
@@ -283,7 +273,7 @@ private fun NoteRow(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = page.createdAt.toLocaleString(),
+                text = formatDate(page.createdAt),
                 fontSize = 10.sp,
                 color = Color(0xFFBBBBBB)
             )
@@ -305,4 +295,10 @@ private fun TopicGroupHeader(tag: String, count: Int) {
         Spacer(Modifier.width(8.dp))
         Text("$count not", fontSize = 10.sp, color = Color(0xFFAAAAAA))
     }
+}
+
+/** Format a Date as "dd MMM HH:mm" (e.g. "13 Eyl 14:30") */
+private fun formatDate(date: Date): String {
+    val fmt = SimpleDateFormat("d MMM HH:mm", Locale("tr", "TR"))
+    return fmt.format(date)
 }
