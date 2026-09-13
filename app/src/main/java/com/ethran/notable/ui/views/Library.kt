@@ -5,10 +5,8 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.ethran.notable.navigation.NavigationDestination
-import com.ethran.notable.ui.viewmodels.LibraryViewModel
 
 /**
  * Library destination — existing route for the book/folder list.
@@ -23,15 +21,18 @@ object LibraryDestination : NavigationDestination {
 
 /**
  * Library composable — the original book/folder list screen.
- * Kept as a stub for navigation compatibility.
+ * Kept as a stub for navigation compatibility only.
+ * Navigation to Library from editor toolbar still works (opens placeholder).
  */
 @Composable
 fun Library(
     navController: NavController,
     folderId: String?,
     goToPage: (String) -> Unit,
-    onCreateNewQuickPage: (String?) -> Unit,
-    viewModel: LibraryViewModel = hiltViewModel()
+    onCreateNewQuickPage: (String?) -> Unit
 ) {
-    Text("Library", modifier = Modifier.padding(16.dp))
+    Text(
+        "Library",
+        modifier = Modifier.padding(16.dp)
+    )
 }

@@ -46,14 +46,14 @@ class HomeViewModel @Inject constructor(
             try {
                 withContext(Dispatchers.IO) {
                     // Single-shot reads: no observers needed
-                    val pinned = pageRepository.getPinnedPages().value ?: emptyList()
-                    val recent = pageRepository.getRecentPages(10).value ?: emptyList()
-                    val tags = annotationRepository.getDistinctTags()
-                    val sortedTags = tagPriorityDao.getAllSorted().associate { it.tagName to it.sortOrder }
+                    val pinned = try { pageRepository.getPinnedPages().value } catch (e: Exception) { null } ?: emptyList()
+                    val recent = try { pageRepository.getRecentPages(10).value } catch (e: Exception) { null } ?: emptyList()
+                    val tags = try { annotationRepository.getDistinctTags() } catch (e: Exception) { emptyList() }
+                    val sortedTags = try { tagPriorityDao.getAllSorted().associate { it.tagName to it.sortOrder } } catch (e: Exception) { emptyMap() }
 
                     val groups = tags.map { tag ->
-                        val pageIds = annotationRepository.getPageIdsByTag(tag)
-                        val pages = pageRepository.getByIds(pageIds)
+                        val pageIds = try { annotationRepository.getPageIdsByTag(tag) } catch (e: Exception) { emptyList() }
+                        val pages = try { pageRepository.getByIds(pageIds) } catch (e: Exception) { emptyList() }
                         TopicGroup(tag = tag, pages = pages)
                     }.sortedBy { sortedTags[it.tag] ?: Int.MAX_VALUE }
 
@@ -65,7 +65,7 @@ class HomeViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false)
+                _uiState.value = HomeUiState(isLoading = false)
             }
         }
     }

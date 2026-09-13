@@ -56,11 +56,32 @@ class AutoMigration31to32 : AutoMigrationSpec
 
 val MIGRATION_35_36 = object : Migration(35, 36) {
     override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE Page ADD COLUMN title TEXT NOT NULL DEFAULT ''")
-        db.execSQL("ALTER TABLE Page ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
-        db.execSQL("ALTER TABLE Annotation ADD COLUMN text TEXT NOT NULL DEFAULT ''")
+        // Safely add columns — check existence first to avoid "duplicate column" errors
+        val pageCols = getColumnNames(db, "Page")
+        val annotCols = getColumnNames(db, "Annotation")
+
+        if ("title" !in pageCols) {
+            db.execSQL("ALTER TABLE Page ADD COLUMN title TEXT NOT NULL DEFAULT ''")
+        }
+        if ("pinned" !in pageCols) {
+            db.execSQL("ALTER TABLE Page ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
+        }
+        if ("text" !in annotCols) {
+            db.execSQL("ALTER TABLE Annotation ADD COLUMN text TEXT NOT NULL DEFAULT ''")
+        }
         db.execSQL("CREATE TABLE IF NOT EXISTS tag_priority (tagName TEXT PRIMARY KEY, sortOrder INTEGER NOT NULL DEFAULT 0)")
     }
+}
+
+/** Utility: return column names for a given table. Handles both camelCase and lowercase table names. */
+private fun getColumnNames(db: SupportSQLiteDatabase, tableName: String): Set<String> {
+    val names = mutableSetOf<String>()
+    val cursor = db.query("PRAGMA table_info('$tableName')")
+    while (cursor.moveToNext()) {
+        names.add(cursor.getString(1)) // column 'name' is at index 1
+    }
+    cursor.close()
+    return names
 }
 // 1. Rename original Stroke table to stroke_old
 // 2. Drop any carried indexes from old table (index_Stroke_pageId)
