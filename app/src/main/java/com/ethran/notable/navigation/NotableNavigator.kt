@@ -52,7 +52,7 @@ class NotableNavigator(
 
     val startDestination: String
         get() = if (GlobalAppSettings.current.showWelcome || !hasFilePermission) WelcomeDestination.route
-        else HomeDestination.route
+        else LibraryDestination.route  // Temporary: revert to Library until HomeView crash is resolved
 
     val quickNavSourcePageId: String?
         get() = navController.currentBackStackEntry?.savedStateHandle?.get<String>("quickNavSourcePageId")

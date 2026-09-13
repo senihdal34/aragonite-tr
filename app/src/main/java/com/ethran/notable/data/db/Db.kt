@@ -138,6 +138,7 @@ object DatabaseModule {
                 MIGRATION_32_33,
                 MIGRATION_35_36
             )
+            .fallbackToDestructiveMigration()
             .build()
     }
 
