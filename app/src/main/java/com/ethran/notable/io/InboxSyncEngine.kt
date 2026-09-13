@@ -163,7 +163,11 @@ object InboxSyncEngine {
         val createdDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(page.createdAt)
 
         // Use inboxPath directly (no per-note subfolder)
-        val noteDir = File(if (inboxPath.startsWith("/")) inboxPath else File(Environment.getExternalStorageDirectory(), inboxPath))
+        val noteDir = if (inboxPath.startsWith("/")) {
+            File(inboxPath)
+        } else {
+            File(Environment.getExternalStorageDirectory(), inboxPath)
+        }
 
         // Phase 2: Render JPG (graceful degradation — AC1.3)
         try {
