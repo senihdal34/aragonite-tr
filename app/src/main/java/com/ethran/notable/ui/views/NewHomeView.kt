@@ -35,6 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -91,16 +93,16 @@ fun HomeView(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Notlar", fontSize = 20.sp, color = Color(0xFF1A1A1A))
+            Text("Notlar", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("➕", modifier = Modifier.clickable(
+                Text("➕", fontSize = 30.sp, modifier = Modifier.clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
-                ) { onCreateNewPage() })
-                Text("⚙️", modifier = Modifier.clickable(
+                ) { onCreateNewPage() }.padding(12.dp))
+                Text("⚙️", fontSize = 30.sp, modifier = Modifier.clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
-                ) { onSettings() })
+                ) { onSettings() }.padding(12.dp))
             }
         }
 
@@ -110,6 +112,7 @@ fun HomeView(
         SectionTitle("📌 Sabitlenenler")
         if (state.pinnedPages.isNotEmpty()) {
             PinnedSection(
+                revision = state.thumbRevision,
                 pages = state.pinnedPages,
                 onOpenPage = onOpenPage,
                 onUnpin = { pageId -> viewModel.togglePin(pageId, true) }
@@ -117,7 +120,7 @@ fun HomeView(
         } else {
             Text(
                 "Sabitlenmiş not yok",
-                fontSize = 12.sp,
+                fontSize = 18.sp,
                 color = Color(0xFFAAAAAA),
                 modifier = Modifier.padding(vertical = 8.dp)
             )
@@ -129,6 +132,7 @@ fun HomeView(
         state.recentPages.forEach { page ->
             NoteRow(
                 page = page,
+                revision = state.thumbRevision,
                 onClick = { onOpenPage(page.id) }
             )
         }
@@ -146,7 +150,7 @@ fun HomeView(
         ) {
             val input by viewModel.inputTag.collectAsState()
             TopicInput(value = input, onValueChange = { viewModel.setInputTag(it) })
-            Text("➕", modifier = Modifier.clickable(
+            Text("➕", fontSize = 30.sp, modifier = Modifier.clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { viewModel.addTag(input) })
@@ -157,6 +161,7 @@ fun HomeView(
                 group.pages.forEach { page ->
                     NoteRow(
                         page = page,
+                        revision = state.thumbRevision,
                         onClick = { onOpenPage(page.id) }
                     )
                 }
@@ -164,7 +169,7 @@ fun HomeView(
         } else {
             Text(
                 "Henüz konu yok",
-                fontSize = 12.sp,
+                fontSize = 18.sp,
                 color = Color(0xFFAAAAAA),
                 modifier = Modifier.padding(vertical = 4.dp)
             )
@@ -174,7 +179,7 @@ fun HomeView(
         if (state.isLoading) {
             Text(
                 "Yükleniyor...",
-                fontSize = 12.sp,
+                fontSize = 18.sp,
                 color = Color(0xFFAAAAAA),
                 modifier = Modifier.padding(top = 8.dp)
             )
@@ -186,15 +191,16 @@ fun HomeView(
 private fun SectionTitle(title: String) {
     Text(
         text = title,
-        fontSize = 10.sp,
-        color = Color(0xFFAAAAAA),
-        letterSpacing = 0.6.sp,
-        modifier = Modifier.padding(bottom = 4.dp)
+        fontSize = 22.sp,
+        fontWeight = FontWeight.Bold,
+        color = Color(0xFF444444),
+        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
     )
 }
 
 @Composable
 private fun PinnedSection(
+    revision: Int,
     pages: List<Page>,
     onOpenPage: (String) -> Unit,
     onUnpin: (String) -> Unit
@@ -208,6 +214,7 @@ private fun PinnedSection(
         pages.forEach { page ->
             PinnedPageCard(
                 page = page,
+                revision = revision,
                 onClick = { onOpenPage(page.id) },
                 onUnpin = { onUnpin(page.id) }
             )
@@ -218,10 +225,11 @@ private fun PinnedSection(
 @Composable
 private fun PinnedPageCard(
     page: Page,
+    revision: Int,
     onClick: () -> Unit,
     onUnpin: () -> Unit
 ) {
-    Column(modifier = Modifier.width(110.dp)) {
+    Column(modifier = Modifier.width(170.dp)) {
         // Thumbnail area (3:4 ratio)
         Box(
             modifier = Modifier
@@ -235,7 +243,11 @@ private fun PinnedPageCard(
         ) {
             PagePreview(
                 modifier = Modifier.fillMaxSize(),
-                pageId = page.id
+                pageId = page.id,
+                revision = revision,
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
+                backgroundColor = Color.White
             )
             Text(
                 "1",
@@ -245,14 +257,14 @@ private fun PinnedPageCard(
                     .background(Color.Black)
                     .padding(horizontal = 4.dp, vertical = 2.dp),
                 color = Color.White,
-                fontSize = 9.sp
+                fontSize = 14.sp
             )
             // Unpin button top-left
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(2.dp)
-                    .size(18.dp)
+                    .size(32.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(Color(0x99000000))
                     .clickable(
@@ -264,14 +276,14 @@ private fun PinnedPageCard(
                 Text(
                     text = "✕",
                     color = Color.White,
-                    fontSize = 11.sp
+                    fontSize = 18.sp
                 )
             }
         }
         // Title below thumbnail
         Text(
             text = page.title.ifBlank { "İsimsiz Not" },
-            fontSize = 11.sp,
+            fontSize = 17.sp,
             color = Color(0xFF333333),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -285,47 +297,53 @@ private fun PinnedPageCard(
 @Composable
 private fun NoteRow(
     page: Page,
+    revision: Int,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .border(1.dp, Color(0xFFE8E4DF), RoundedCornerShape(6.dp))
+            .padding(vertical = 6.dp)
+            .border(1.dp, Color(0xFFCFC8C0), RoundedCornerShape(6.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onClick() }
-            .padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Small thumbnail
         Box(
             modifier = Modifier
-                .width(50.dp)
-                .height(60.dp)
-                .border(1.dp, Color(0xFFDDD6CE), RoundedCornerShape(3.dp))
+                .width(96.dp)
+                .height(128.dp)
+                .border(1.dp, Color(0xFFBBB3AA), RoundedCornerShape(3.dp))
                 .clip(RoundedCornerShape(3.dp))
         ) {
             PagePreview(
                 modifier = Modifier.fillMaxSize(),
-                pageId = page.id
+                pageId = page.id,
+                revision = revision,
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
+                backgroundColor = Color.White
             )
         }
         // Info column
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = page.title.ifBlank { "İsimsiz Not" },
-                fontSize = 13.sp,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Medium,
                 color = Color(0xFF1A1A1A),
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = formatDate(page.createdAt),
-                fontSize = 10.sp,
-                color = Color(0xFFBBBBBB)
+                fontSize = 16.sp,
+                color = Color(0xFF777777)
             )
         }
     }
@@ -336,19 +354,19 @@ private fun TopicGroupHeader(tag: String, count: Int, onRemove: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp, bottom = 4.dp),
+            .padding(top = 12.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("#", fontSize = 14.sp, color = Color(0xFFAAAAAA))
-        Spacer(Modifier.width(4.dp))
-        Text(tag, fontSize = 12.sp, color = Color(0xFF555555))
-        Spacer(Modifier.width(8.dp))
-        Text("$count not", fontSize = 10.sp, color = Color(0xFFAAAAAA))
+        Text("#", fontSize = 24.sp, color = Color(0xFF777777))
+        Spacer(Modifier.width(6.dp))
+        Text(tag, fontSize = 22.sp, fontWeight = FontWeight.Medium, color = Color(0xFF333333))
+        Spacer(Modifier.width(12.dp))
+        Text("$count not", fontSize = 16.sp, color = Color(0xFF777777))
         Spacer(Modifier.weight(1f))
         Text("✕", modifier = Modifier.clickable(
             interactionSource = remember { MutableInteractionSource() },
             indication = null
-        ) { onRemove() }, fontSize = 12.sp, color = Color(0xFFCCCCCC))
+        ) { onRemove() }.padding(12.dp), fontSize = 22.sp, color = Color(0xFF888888))
     }
 }
 
@@ -357,12 +375,12 @@ private fun TopicInput(value: String, onValueChange: (String) -> Unit) {
     TextField(
         value = value,
         onValueChange = onValueChange,
-        placeholder = { Text("yeni konu...", fontSize = 12.sp, color = Color(0xFF333333), style = TextStyle(color = Color(0xFF333333))) },
+        placeholder = { Text("yeni konu...", fontSize = 18.sp, color = Color(0xFF555555), style = TextStyle(color = Color(0xFF555555))) },
         modifier = Modifier
-            .height(36.dp)
-            .fillMaxWidth(0.7f),
+            .height(60.dp)
+            .fillMaxWidth(0.75f),
         singleLine = true,
-        textStyle = TextStyle(color = Color(0xFF333333), fontSize = 12.sp),
+        textStyle = TextStyle(color = Color(0xFF222222), fontSize = 20.sp),
         colors = TextFieldDefaults.textFieldColors(
             textColor = Color(0xFF333333),
             backgroundColor = Color(0xFFE8E4DF),

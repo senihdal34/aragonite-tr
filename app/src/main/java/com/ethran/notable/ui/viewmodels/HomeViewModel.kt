@@ -7,11 +7,13 @@ import com.ethran.notable.data.db.Page
 import com.ethran.notable.data.db.PageRepository
 import com.ethran.notable.data.db.TagPriority
 import com.ethran.notable.data.db.TagPriorityDao
+import com.ethran.notable.io.ThumbnailGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -25,14 +27,17 @@ data class HomeUiState(
     val pinnedPages: List<Page> = emptyList(),
     val recentPages: List<Page> = emptyList(),
     val topicGroups: List<TopicGroup> = emptyList(),
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    /** Bumped whenever a missing thumbnail has been created, so cards reload their image. */
+    val thumbRevision: Int = 0
 )
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val pageRepository: PageRepository,
     private val annotationRepository: AnnotationRepository,
-    private val tagPriorityDao: TagPriorityDao
+    private val tagPriorityDao: TagPriorityDao,
+    private val thumbnailGenerator: ThumbnailGenerator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -73,11 +78,26 @@ class HomeViewModel @Inject constructor(
                         pinnedPages = pinned,
                         recentPages = recent,
                         topicGroups = groups,
-                        isLoading = false
+                        isLoading = false,
+                        thumbRevision = _uiState.value.thumbRevision
                     )
+                    generateMissingThumbnails((pinned + recent + groups.flatMap { it.pages }).map { it.id }.distinct())
                 }
             } catch (e: Exception) {
                 _uiState.value = HomeUiState(isLoading = false)
+            }
+        }
+    }
+
+    private var thumbJob: kotlinx.coroutines.Job? = null
+
+    private fun generateMissingThumbnails(pageIds: List<String>) {
+        thumbJob?.cancel()
+        thumbJob = viewModelScope.launch(Dispatchers.IO) {
+            for (id in pageIds) {
+                if (thumbnailGenerator.ensure(id)) {
+                    _uiState.update { it.copy(thumbRevision = it.thumbRevision + 1) }
+                }
             }
         }
     }
