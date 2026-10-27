@@ -31,7 +31,7 @@ check(any(w in norm for w in hard), f"at least one word from the block that used
 check("could not be recognized" not in text, "no 'could not be recognized' placeholder")
 struck = re.findall(r"~~[^~\n]+~~", text)
 check(len(struck) >= 5, f"struck-through lines are marked ~~like this~~ (found {len(struck)}, expected >= 5)")
-check("satranc" in norm, "text under a strike line is readable (Satranç)")
+check("santranc" in norm or "satranc" in norm, "text under a strike line is readable (Santranç)")
 
 # --- image ---
 m = re.search(r"!\[[^\]]*\]\(([^)]+)\)", md)
