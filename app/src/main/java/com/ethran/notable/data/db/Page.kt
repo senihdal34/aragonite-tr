@@ -84,6 +84,13 @@ interface PageDao {
     @Query("SELECT * FROM page WHERE pinned = 0 ORDER BY createdAt DESC LIMIT :limit")
     fun getRecentPages(limit: Int = 10): LiveData<List<Page>>
 
+    // One-shot variants for ViewModels: an unobserved Room LiveData has no value (always null).
+    @Query("SELECT * FROM page WHERE pinned = 1 ORDER BY updatedAt DESC")
+    suspend fun getPinnedPagesList(): List<Page>
+
+    @Query("SELECT * FROM page WHERE pinned = 0 ORDER BY createdAt DESC LIMIT :limit")
+    suspend fun getRecentPagesList(limit: Int = 10): List<Page>
+
     @Query("UPDATE page SET title = :title WHERE id = :pageId")
     suspend fun updateTitle(pageId: String, title: String)
 
@@ -141,6 +148,10 @@ class PageRepository @Inject constructor(
     fun getRecentPages(limit: Int = 10): LiveData<List<Page>> {
         return db.getRecentPages(limit)
     }
+
+    suspend fun getPinnedPagesList(): List<Page> = db.getPinnedPagesList()
+
+    suspend fun getRecentPagesList(limit: Int = 10): List<Page> = db.getRecentPagesList(limit)
 
     suspend fun updateTitle(pageId: String, title: String) {
         db.updateTitle(pageId, title)

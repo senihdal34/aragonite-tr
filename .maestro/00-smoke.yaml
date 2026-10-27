@@ -1,0 +1,10 @@
+appId: io.aragonite.notes.debug
+---
+# Fresh install: onboarding screen, file access already granted by run-e2e.sh
+- launchApp
+- assertVisible: "Welcome to Aragonite"
+- assertVisible: "Granted ✓"
+- takeScreenshot: .e2e-shots/smoke-welcome
+- tapOn: "Continue"
+- assertVisible: "Notlar"
+- takeScreenshot: .e2e-shots/smoke-home

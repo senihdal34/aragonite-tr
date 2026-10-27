@@ -1,0 +1,19 @@
+appId: io.aragonite.notes.debug
+---
+# Long handwritten note (1960 strokes) -> Save & Exit -> export to the PC inbox folder.
+# Output is checked by scripts/e2e-export.sh (text present, image present, no stale copies).
+- launchApp
+- extendedWaitUntil:
+    visible: "Gün 1- 14 Eylül"
+    timeout: 20000
+- tapOn: "Gün 1- 14 Eylül"
+- extendedWaitUntil:
+    visible: "Save & Exit"
+    timeout: 20000
+- extendedWaitUntil:
+    notVisible: "Loading strokes..."
+    timeout: 60000
+- tapOn: "Save & Exit"
+- extendedWaitUntil:
+    visible: "Notlar"
+    timeout: 20000

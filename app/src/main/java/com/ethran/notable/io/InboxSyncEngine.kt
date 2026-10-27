@@ -77,7 +77,7 @@ object InboxSyncEngine {
         // 1. Recognize ALL strokes together to preserve natural text flow
         var fullText = if (serviceReady && allStrokes.isNotEmpty()) {
             log.i("Recognizing all ${allStrokes.size} strokes")
-            val result = recognizeStrokesSafe(allStrokes)
+            val result = recognizeStrokesSafe(context, allStrokes)
             postProcessRecognition(result)
         } else ""
 
@@ -107,7 +107,7 @@ object InboxSyncEngine {
             var diffSucceeded = false
             val nonAnnotStrokes = allStrokes.filter { it.id !in annotationStrokeIds }
             if (nonAnnotStrokes.isNotEmpty()) {
-                val baseText = postProcessRecognition(recognizeStrokesSafe(nonAnnotStrokes))
+                val baseText = postProcessRecognition(recognizeStrokesSafe(context, nonAnnotStrokes))
                 log.i("Base text (without annotations): '${baseText.take(200)}'")
 
                 val annotationTexts = diffWords(baseText, fullText)
@@ -135,7 +135,7 @@ object InboxSyncEngine {
                 for (annotation in sortedAnnotations) {
                     val overlapping = annotationStrokeMap[annotation.id] ?: continue
                     if (overlapping.isEmpty()) continue
-                    val rawAnnotText = recognizeStrokesSafe(overlapping).trim()
+                    val rawAnnotText = recognizeStrokesSafe(context, overlapping).trim()
                     if (rawAnnotText.isBlank()) continue
                     log.i("Annotation ${annotation.type} (fallback raw): '$rawAnnotText'")
 
@@ -172,13 +172,16 @@ object InboxSyncEngine {
         // Generate a unique base name from the recognized text + timestamp
         val timestamp = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US).format(page.createdAt)
         val titleLine = finalContent.lines().firstOrNull()?.trim()?.take(50)
-            ?.replace(Regex("[/\\\\:*?\"<>|]"), "-")
-            ?.replace(Regex("\\s+"), " ")?.trim()
+            ?.let { sanitizeFileName(it) }
         val baseName = if (!titleLine.isNullOrBlank()) {
             "$titleLine-$timestamp"
         } else {
             timestamp
         }
+
+        // Re-syncing a page whose recognized title changed would leave the old files behind
+        // (same note twice, one of them stale). Remove earlier exports of this page first.
+        removePreviousExports(noteDir, timestamp, baseName)
 
         // Sub-directories for attachments
         val jpgDir = File(noteDir, "jpg_archive").also { it.mkdirs() }
@@ -249,9 +252,9 @@ object InboxSyncEngine {
         }
     }
 
-    private suspend fun recognizeStrokesSafe(strokes: List<Stroke>): String {
+    private suspend fun recognizeStrokesSafe(context: Context, strokes: List<Stroke>): String {
         return try {
-            OnyxHWREngine.recognizeStrokes(strokes, viewWidth = 1404f, viewHeight = 1872f) ?: ""
+            OnyxHWREngine.recognizeStrokesChunked(context, strokes)
         } catch (e: Exception) {
             log.e("OnyxHWR failed: ${e.message}")
             ""
@@ -362,13 +365,44 @@ object InboxSyncEngine {
         sb.appendLine("source: $source")
         sb.appendLine("---")
         sb.appendLine()
-        sb.appendLine(content.trim())
+        if (content.isBlank()) {
+            sb.appendLine("_Handwriting could not be recognized. See the page image below._")
+        } else {
+            sb.appendLine(content.trim())
+        }
         sb.appendLine()
         sb.appendLine("---")
         for (i in 1..pages) {
-            sb.appendLine("![[jpg_archive/${baseName}-page-$i.jpg]]")
+            // Standard markdown image with a relative, percent-encoded path: renders in Obsidian
+            // and in any other markdown viewer (the Obsidian-only ![[...]] form does not).
+            sb.appendLine("![page $i](jpg_archive/${encodePath("${baseName}-page-$i.jpg")})")
         }
         return sb.toString()
+    }
+
+    /** Remove characters that break file names or markdown/wiki links. */
+    internal fun sanitizeFileName(name: String): String =
+        name.replace(Regex("""[/\\:*?"<>|\[\]#^%]"""), "-")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .trimEnd('.', ' ')
+
+    internal fun encodePath(fileName: String): String =
+        java.net.URLEncoder.encode(fileName, "UTF-8").replace("+", "%20")
+
+    /** Delete files of earlier exports of the same page (same timestamp) except the current ones. */
+    internal fun removePreviousExports(noteDir: File, timestamp: String, keepBaseName: String) {
+        fun stale(file: File, suffix: String) =
+            file.isFile && file.name.endsWith(suffix) && !file.name.startsWith("$keepBaseName.") &&
+                !file.name.startsWith("$keepBaseName-page-")
+
+        noteDir.listFiles()?.filter { stale(it, "$timestamp.md") }?.forEach { it.delete() }
+        for (sub in listOf("jpg_archive", "sb1_archive")) {
+            File(noteDir, sub).listFiles()
+                ?.filter { it.isFile && Regex(".*${Regex.escape(timestamp)}-page-\\d+\\.(jpg|sb1)$").matches(it.name) }
+                ?.filter { stale(it, it.name) }
+                ?.forEach { it.delete() }
+        }
     }
 
     /**
