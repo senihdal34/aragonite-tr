@@ -89,6 +89,9 @@ object OnyxHWREngine {
 
     @Volatile private var initialized = false
 
+    /** User vocabulary applied to every recognition result (null = engine output unchanged). */
+    @Volatile var glossary: HwrGlossary? = null
+
     /**
      * Initialize the MyScript recognizer via the service's init method.
      */
@@ -213,7 +216,26 @@ object OnyxHWREngine {
             // Success: result is HWRConvertBean with label field
             val result = obj.optJSONObject("result")
             if (result != null) {
-                return result.optString("label", "")
+                val label = result.optString("label", "")
+                val g = glossary
+                val wordsJson = result.optJSONArray("words")
+                if (g != null && !g.isEmpty() && wordsJson != null && wordsJson.length() > 0) {
+                    val words = (0 until wordsJson.length()).mapNotNull { i ->
+                        val w = wordsJson.optJSONObject(i) ?: return@mapNotNull null
+                        val candidates = w.optJSONArray("candidates")
+                        HwrWord(
+                            label = w.optString("label", ""),
+                            candidates = if (candidates == null) emptyList()
+                            else (0 until candidates.length()).map { candidates.optString(it) }
+                        )
+                    }
+                    val rebuilt = HwrWordCorrector.rebuild(words, g)
+                    // Only trust the rebuilt text when it is the same text with some words swapped.
+                    if (rebuilt.isNotBlank() && rebuilt.replace(Regex("\\s+"), "").length >=
+                        label.replace(Regex("\\s+"), "").length * 0.8
+                    ) return rebuilt
+                }
+                return label
             }
             // Fallback: try top-level label
             obj.optString("label", "")
