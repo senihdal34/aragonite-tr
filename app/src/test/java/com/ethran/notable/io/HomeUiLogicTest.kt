@@ -49,6 +49,6 @@ class HomeUiLogicTest {
             pages = 1,
             baseName = "Toplantı notları-2026-09-13-14-30-00"
         )
-        assertContains(result, "![[jpg_archive/Toplantı notları-2026-09-13-14-30-00-page-1.jpg]]")
+        assertContains(result, "![page 1](jpg_archive/Toplant%C4%B1%20notlar%C4%B1-2026-09-13-14-30-00-page-1.jpg)")
     }
 }

@@ -124,14 +124,15 @@ object OnyxHWREngine {
     suspend fun recognizeStrokes(
         strokes: List<Stroke>,
         viewWidth: Float,
-        viewHeight: Float
+        viewHeight: Float,
+        offsetY: Float = 0f
     ): String? {
         val svc = service ?: return null
         if (strokes.isEmpty()) return ""
 
         ensureInitialized(svc, viewWidth, viewHeight)
 
-        val protoBytes = buildProtobuf(strokes, viewWidth, viewHeight)
+        val protoBytes = buildProtobuf(strokes, viewWidth, viewHeight, offsetY)
         val pfd = createMemoryFilePfd(protoBytes)
             ?: throw IllegalStateException("Failed to create MemoryFile PFD")
 
@@ -222,6 +223,68 @@ object OnyxHWREngine {
         }
     }
 
+    /**
+     * Recognize a whole page by sending it in line-aligned chunks (see [HwrChunker]).
+     * Each chunk is shifted to the top of its own view, so the recognizer sees a small page
+     * regardless of how long the note is. A chunk that times out or fails is skipped and the
+     * service is re-bound once if it died, so one bad chunk never empties the whole page.
+     */
+    suspend fun recognizeStrokesChunked(context: Context, strokes: List<Stroke>): String {
+        val deadline = System.currentTimeMillis() + PAGE_BUDGET_MS
+        val texts = mutableListOf<String>()
+        for ((index, chunk) in HwrChunker.chunkByLines(strokes).withIndex()) {
+            val text = recognizeChunk(context, chunk, "$index", deadline)
+            if (!text.isNullOrBlank()) texts.add(text.trim())
+        }
+        return texts.joinToString("\n")
+    }
+
+    private const val PAGE_BUDGET_MS = 240_000L
+
+    /**
+     * One recognition request. When the service times out or dies on a chunk, retry the two
+     * halves separately so only the stroke group that breaks the recognizer is lost.
+     */
+    private suspend fun recognizeChunk(
+        context: Context,
+        chunk: List<Stroke>,
+        label: String,
+        deadline: Long
+    ): String? {
+        if (System.currentTimeMillis() > deadline) {
+            log.w("OnyxHWR page budget used up, skipping chunk $label")
+            return null
+        }
+        val minTop = chunk.minOf { it.top }
+        val maxBottom = chunk.maxOf { it.bottom }
+        val maxRight = chunk.maxOf { it.right }
+        val margin = 32f
+        val viewWidth = kotlin.math.ceil(maxRight + margin).coerceAtLeast(1404f)
+        val viewHeight = kotlin.math.ceil(maxBottom - minTop + 2 * margin)
+        val offsetY = minTop - margin
+
+        val text = if (bindAndAwait(context)) {
+            try {
+                recognizeStrokes(chunk, viewWidth, viewHeight, offsetY)
+            } catch (e: Exception) {
+                log.e("OnyxHWR chunk $label failed: ${e.message}")
+                null
+            }
+        } else null
+        if (text != null) return text
+
+        val halves = HwrChunker.splitInHalf(chunk)
+        if (halves == null) {
+            log.w("OnyxHWR chunk $label (${chunk.size} strokes) could not be recognized")
+            return null
+        }
+        log.w("OnyxHWR chunk $label failed, retrying as two halves")
+        val first = recognizeChunk(context, halves.first, "$label.a", deadline)
+        val second = recognizeChunk(context, halves.second, "$label.b", deadline)
+        return listOfNotNull(first?.trim(), second?.trim()).filter { it.isNotEmpty() }
+            .joinToString("\n").ifEmpty { null }
+    }
+
     // --- Protobuf encoding (hand-rolled, no library needed) ---
 
     /**
@@ -236,7 +299,8 @@ object OnyxHWREngine {
     private fun buildProtobuf(
         strokes: List<Stroke>,
         viewWidth: Float,
-        viewHeight: Float
+        viewHeight: Float,
+        offsetY: Float = 0f
     ): ByteArray {
         val out = ByteArrayOutputStream()
 
@@ -288,7 +352,7 @@ object OnyxHWREngine {
 
                 val pointerBytes = encodePointerProto(
                     x = point.x,
-                    y = point.y,
+                    y = point.y - offsetY,
                     t = timestamp,
                     f = pressure,
                     pointerId = 0,

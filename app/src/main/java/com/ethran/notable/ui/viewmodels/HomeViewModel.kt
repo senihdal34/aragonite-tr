@@ -54,13 +54,13 @@ class HomeViewModel @Inject constructor(
             try {
                 withContext(Dispatchers.IO) {
                     // Single-shot reads
-                    val pinned = try { pageRepository.getPinnedPages().value } catch (e: Exception) { null } ?: emptyList()
-                    val recent = try { pageRepository.getRecentPages(10).value } catch (e: Exception) { null } ?: emptyList()
+                    val pinned = try { pageRepository.getPinnedPagesList() } catch (e: Exception) { emptyList() }
+                    val recent = try { pageRepository.getRecentPagesList(10) } catch (e: Exception) { emptyList() }
 
                     // Combine annotation tags + manually added tags (TagPriority)
                     val annotTags = try { annotationRepository.getDistinctTags() } catch (e: Exception) { emptyList() }
                     val manualTags = try { tagPriorityDao.getAllSorted().map { it.tagName } } catch (e: Exception) { emptyList() }
-                    val allTags = (annotTags + manualTags).distinct()
+                    val allTags = (annotTags + manualTags).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
                     val sortedTags = try { tagPriorityDao.getAllSorted().associate { it.tagName to it.sortOrder } } catch (e: Exception) { emptyMap() }
 
                     val groups = allTags.map { tag ->
@@ -105,8 +105,8 @@ class HomeViewModel @Inject constructor(
     fun togglePin(pageId: String, currentPinned: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             pageRepository.setPinned(pageId, !currentPinned)
-            val pinned = pageRepository.getPinnedPages().value ?: emptyList()
-            val recent = pageRepository.getRecentPages(10).value ?: emptyList()
+            val pinned = pageRepository.getPinnedPagesList()
+            val recent = pageRepository.getRecentPagesList(10)
             _uiState.value = _uiState.value.copy(pinnedPages = pinned, recentPages = recent)
         }
     }
