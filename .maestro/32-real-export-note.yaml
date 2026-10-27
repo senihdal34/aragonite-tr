@@ -1,0 +1,18 @@
+appId: io.aragonite.notes
+---
+# REAL app: export one note by its title (run: maestro test -e NOTE="THY Rapor" ...). Back up first.
+- launchApp
+- extendedWaitUntil:
+    visible: ${NOTE}
+    timeout: 30000
+- tapOn: ${NOTE}
+- extendedWaitUntil:
+    visible: "Save & Exit"
+    timeout: 30000
+- extendedWaitUntil:
+    notVisible: "Loading strokes..."
+    timeout: 60000
+- tapOn: "Save & Exit"
+- extendedWaitUntil:
+    visible: ".*Son Notlar"
+    timeout: 30000
