@@ -67,6 +67,15 @@ object InboxSyncEngine {
             return
         }
 
+        // User vocabulary (glossary.txt + titles/tags of earlier exports) corrects names and English terms.
+        run {
+            val inbox = GlobalAppSettings.current.obsidianInboxPath
+            val dir = if (inbox.startsWith("/")) File(inbox) else File(Environment.getExternalStorageDirectory(), inbox)
+            HwrGlossaryLoader.ensureDefaultFile(dir)
+            OnyxHWREngine.glossary = HwrGlossaryLoader.load(dir)
+            log.i("Glossary: ${OnyxHWREngine.glossary?.size} words")
+        }
+
         val serviceReady = try {
             OnyxHWREngine.bindAndAwait(context)
         } catch (e: Exception) {

@@ -20,3 +20,4 @@ gradle/gradle-daemon-jvm.properties
 .e2e-shots/
 
 .e2e-seed/
+.kotlin

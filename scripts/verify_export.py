@@ -23,12 +23,15 @@ lines = [l for l in text.splitlines() if l.strip()]
 check(len(lines) >= 15, f"recognized text has >= 15 lines (got {len(lines)})")
 norm = unicodedata.normalize("NFKD", text.lower())
 norm = "".join(c for c in norm if not unicodedata.combining(c)).replace("ı", "i")
-must = ["vodafone", "outsource", "mercury", "regulation", "pulse", "cronus", "bist", "bollinger", "rekabet"]
+must = ["rasyonet", "linkedin", "windowsta", "vodafone", "outsource", "mercury", "regulation", "pulse", "cronus", "bist", "bollinger", "rekabet"]
 missing = [w for w in must if w not in norm]
 check(not missing, f"expected words present, missing: {missing}")
 hard = ["operasyon", "sofistike", "stratejiler", "trendde"]   # lost when the recognizer crashed on that block
 check(any(w in norm for w in hard), f"at least one word from the block that used to crash the recognizer ({hard})")
 check("could not be recognized" not in text, "no 'could not be recognized' placeholder")
+struck = re.findall(r"~~[^~\n]+~~", text)
+check(len(struck) >= 5, f"struck-through lines are marked ~~like this~~ (found {len(struck)}, expected >= 5)")
+check("santranc" in norm or "satranc" in norm, "text under a strike line is readable (Santranç)")
 
 # --- image ---
 m = re.search(r"!\[[^\]]*\]\(([^)]+)\)", md)
