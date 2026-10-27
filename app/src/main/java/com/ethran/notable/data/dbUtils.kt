@@ -18,8 +18,8 @@ import java.io.File
 fun getDbDir(): File {
     val documentsDir =
         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-    // Debug builds use their own folder so tests never touch real notes.
-    val dbDir = File(documentsDir, if (BuildConfig.DEBUG) "notabledb-debug" else "notabledb")
+    // The side-by-side test build uses its own folder so tests never touch real notes.
+    val dbDir = File(documentsDir, if (BuildConfig.SIDE_BY_SIDE) "notabledb-debug" else "notabledb")
     if (!dbDir.exists()) {
         dbDir.mkdirs()
     }

@@ -11,8 +11,11 @@ PKG=io.aragonite.notes.debug
 OUT=.e2e-shots/export-result
 [ -f .e2e-seed/app_database ] || { echo "missing .e2e-seed/app_database"; exit 2; }
 
-./gradlew assembleDebug --console=plain -q
-adb install -r app/build/outputs/apk/debug/app-debug.apk >/dev/null
+./gradlew -PSIDE_BY_SIDE=true assembleDebug --console=plain -q
+# The side-by-side TEST app (io.aragonite.notes.debug) may carry an older signing key: reinstall it.
+# The real app (io.aragonite.notes) is never touched by this script.
+adb install -r app/build/outputs/apk/debug/app-debug.apk >/dev/null 2>&1 || {
+  adb uninstall $PKG >/dev/null; adb install app/build/outputs/apk/debug/app-debug.apk >/dev/null; }
 adb shell input keyevent KEYCODE_WAKEUP
 adb shell am force-stop $PKG
 adb shell pm clear $PKG >/dev/null

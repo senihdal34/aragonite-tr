@@ -1,8 +1,0 @@
-// Build output and test artefacts must not sync (causes " 2.class" conflict copies)
-build
-.gradle
-app/build
-.e2e-shots
-local.properties
-.kotlin
-.e2e-seed

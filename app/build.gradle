@@ -50,7 +50,12 @@ android {
                 v1SigningEnabled true
                 v2SigningEnabled true
             } else {
-                logger.info "Running locally, skipping release signing..."
+                // Shared debug key (public, password "android"): every local and CI debug build is
+                // signed the same way, so a new build installs over the previous one in place.
+                storeFile file('debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
             }
         }
         release {
@@ -70,9 +75,14 @@ android {
     }
 
 
+    // -PSIDE_BY_SIDE=true installs the debug build as io.aragonite.notes.debug with its own data
+    // folder, next to the real app (used by the e2e scripts). Off for normal and CI builds.
+    def sideBySide = project.findProperty('SIDE_BY_SIDE')?.toString() == 'true'
+
     buildTypes {
         debug {
-            applicationIdSuffix ".debug"
+            if (sideBySide) applicationIdSuffix ".debug"
+            buildConfigField("boolean", "SIDE_BY_SIDE", sideBySide.toString())
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             // signingConfig signingConfigs.debug
@@ -84,6 +94,7 @@ android {
             }
         }
         release {
+            buildConfigField("boolean", "SIDE_BY_SIDE", "false")
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             buildConfigField("boolean", "IS_NEXT", IS_NEXT)

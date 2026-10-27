@@ -8,8 +8,11 @@ export JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/C
 export ANDROID_HOME=${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}
 export PATH=/opt/homebrew/bin:$JAVA_HOME/bin:$PATH
 PKG=io.aragonite.notes.debug
-./gradlew assembleDebug --console=plain -q
-adb install -r app/build/outputs/apk/debug/app-debug.apk >/dev/null
+./gradlew -PSIDE_BY_SIDE=true assembleDebug --console=plain -q
+# The side-by-side TEST app (io.aragonite.notes.debug) may carry an older signing key: reinstall it.
+# The real app (io.aragonite.notes) is never touched by this script.
+adb install -r app/build/outputs/apk/debug/app-debug.apk >/dev/null 2>&1 || {
+  adb uninstall $PKG >/dev/null; adb install app/build/outputs/apk/debug/app-debug.apk >/dev/null; }
 adb shell input keyevent KEYCODE_WAKEUP
 adb shell am force-stop $PKG
 adb shell pm clear $PKG >/dev/null
