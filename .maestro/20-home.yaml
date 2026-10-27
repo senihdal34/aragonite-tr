@@ -1,16 +1,17 @@
 appId: io.aragonite.notes.debug
 ---
-# Home screen: lists are filled, thumbnails get generated for notes that never had one.
+# Home (newspaper layout): masthead, lead story, columns and thumbnails for notes that never had one.
 - launchApp
 - extendedWaitUntil:
-    visible: ".*Son Notlar"
+    visible: "Notlar"
     timeout: 20000
 - assertVisible: "THY Rapor"
 - assertVisible: "Yeni Finans Ürün Planı"
 - assertVisible: "Gün 1- 14 Eylül"
-- assertVisible: ".*Konular"
+- assertVisible: ".*YENİ NOT YAZ"
+- assertVisible: "AYARLAR"
 # thumbnails are rendered in the background (long notes take a while)
 - extendedWaitUntil:
-    visible: ".*Son Notlar"
+    visible: "Notlar"
     timeout: 90000
 - takeScreenshot: .e2e-shots/home

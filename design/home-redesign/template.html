@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aragonite Ana Ekran Taslakları</title>
+<style>
+:root{--ink:#111;--g1:#555;--g2:#999;--g3:#E3E3E0;--paper:#F6F6F2;--s:.5}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#d9d8d3;color:#222;font:16px/1.45 -apple-system,"Helvetica Neue",Arial,sans-serif;padding:32px 24px 80px}
+header.page{max-width:1500px;margin:0 auto 28px}
+header.page h1{font-size:28px;font-weight:700;letter-spacing:-.01em}
+header.page p{color:#555;max-width:900px;margin-top:6px}
+.spec{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.spec span{background:#fff;border:1px solid #bbb;border-radius:999px;padding:4px 12px;font-size:13px;color:#333}
+section.opt{max-width:1500px;margin:44px auto 0}
+section.opt>h2{font-size:22px;display:flex;gap:12px;align-items:baseline}
+section.opt>h2 small{font-size:14px;font-weight:400;color:#666}
+.why{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:12px 0 18px}
+.why div{background:#fff;border:1px solid #c8c8c2;border-radius:10px;padding:12px 14px;font-size:14px}
+.why b{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#777;margin-bottom:4px}
+.row{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.frame{position:relative;border:10px solid #1b1b1b;border-radius:22px;background:#1b1b1b;cursor:zoom-in;flex:none}
+.frame .lbl{position:absolute;left:0;top:-30px;font-size:13px;color:#555}
+.view{overflow:hidden;background:var(--paper);filter:grayscale(1)}
+.view .screen{transform-origin:0 0;transform:scale(var(--s));background:var(--paper);color:var(--ink);overflow:hidden;position:relative}
+.p .view{width:calc(992px*var(--s));height:calc(1323px*var(--s))}
+.p .screen{width:992px;height:1323px}
+.l .view{width:calc(1323px*var(--s));height:calc(992px*var(--s))}
+.l .screen{width:1323px;height:992px}
+#ov{position:fixed;inset:0;background:rgba(20,20,20,.88);display:none;align-items:center;justify-content:center;z-index:9;cursor:zoom-out}
+#ov.on{display:flex}
+#ov .frame{cursor:zoom-out}
+.note{max-width:1500px;margin:40px auto 0;background:#fff;border:1px solid #c8c8c2;border-radius:10px;padding:16px 18px;font-size:14px}
+.note h3{font-size:15px;margin-bottom:6px}
+.note li{margin-left:18px}
+/* ---------- shared e-ink bits ---------- */
+.thumb{background:#fff;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+.ico{display:inline-block;position:relative}
+.plus{width:28px;height:28px}.plus:before,.plus:after{content:"";position:absolute;background:currentColor}
+.plus:before{left:0;right:0;top:12px;height:4px}.plus:after{top:0;bottom:0;left:12px;width:4px}
+.lines{width:28px;height:22px}.lines:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:currentColor;box-shadow:0 9px 0 currentColor,0 18px 0 currentColor}
+.mag{width:26px;height:26px}.mag:before{content:"";position:absolute;left:0;top:0;width:18px;height:18px;border:3.5px solid currentColor;border-radius:50%}
+.mag:after{content:"";position:absolute;left:16px;top:20px;width:12px;height:3.5px;background:currentColor;transform:rotate(45deg);transform-origin:0 50%}
+/* ---------- A  RAMS ---------- */
+.A{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;padding:56px}
+.A .top{display:flex;justify-content:space-between;align-items:flex-start}
+.A .brand{font-size:15px;letter-spacing:.24em;text-transform:uppercase;color:var(--g1)}
+.A h1{font-size:84px;font-weight:300;letter-spacing:-.03em;line-height:1;margin-top:18px}
+.A .sub{font-size:18px;color:var(--g1);margin-top:10px;letter-spacing:.02em}
+.A .ctl{display:flex;gap:22px}
+.A .btn{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--g1)}
+.A .btn i{width:68px;height:68px;border:2.5px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.A .btn.on i{background:var(--ink);color:#fff}
+.A .rule{height:4px;background:var(--ink);margin:30px 0 26px}
+.A h3{font-size:14px;letter-spacing:.18em;text-transform:uppercase;display:flex;gap:14px;align-items:center;margin:26px 0 12px;font-weight:600}
+.A h3 b{background:var(--ink);color:#fff;padding:2px 8px;font-size:13px}
+.A h3:after{content:"";flex:1;height:1.5px;background:var(--ink)}
+.A .pin{display:flex;gap:28px;align-items:flex-end;padding:6px 0 4px}
+.A .pin .thumb{width:190px;height:253px;border:2.5px solid var(--ink)}
+.A .pin h4{font-size:40px;font-weight:500;letter-spacing:-.02em;line-height:1.1}
+.A .pin p{font-size:18px;color:var(--g1);margin-top:8px}
+.A .li{display:grid;grid-template-columns:54px 84px 1fr auto;gap:22px;align-items:center;padding:14px 0;border-bottom:1.5px solid var(--g2)}
+.A .li .n{font:500 18px/1 "SF Mono",Menlo,monospace;color:var(--g1)}
+.A .li .thumb{width:84px;height:112px;border:2px solid var(--ink)}
+.A .li .t{font-size:30px;font-weight:500;letter-spacing:-.01em}
+.A .li .d{font:400 18px/1 "SF Mono",Menlo,monospace;color:var(--g1)}
+.A .keys{display:flex;gap:18px}
+.A .key{width:200px;height:200px;border:2.5px solid var(--ink);padding:18px;display:flex;flex-direction:column;justify-content:space-between}
+.A .key b{font-size:84px;font-weight:300;line-height:.9;letter-spacing:-.04em}
+.A .key span{font-size:15px;letter-spacing:.16em;text-transform:uppercase}
+.A .key.add{border-style:dashed;align-items:center;justify-content:center;color:var(--g1)}
+.A.land{padding:52px;display:grid;grid-template-columns:430px 1fr;gap:56px}
+.A.land .keys{flex-wrap:wrap;width:420px}
+.A.land .key{width:200px;height:180px}
+.A.land .key b{font-size:72px}
+.A.land .li{grid-template-columns:44px 72px 1fr auto;padding:11px 0}
+.A.land .li .thumb{width:72px;height:96px}
+.A.land .li .t{font-size:27px}
+.A.land h1{font-size:92px}
+/* ---------- B  APPLE ---------- */
+.B{font-family:-apple-system,"SF Pro Display","Inter",system-ui,sans-serif;padding:48px 52px}
+.B .bar{display:flex;justify-content:flex-end;gap:16px;height:60px}
+.B .circ{width:60px;height:60px;border-radius:50%;background:var(--g3);display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.B h1{font-size:60px;font-weight:700;letter-spacing:-.025em;margin:10px 0 18px}
+.B .search{height:68px;border-radius:18px;background:var(--g3);display:flex;align-items:center;gap:16px;padding:0 22px;color:var(--g1);font-size:24px}
+.B .chips{display:flex;gap:12px;margin:20px 0 6px;flex-wrap:wrap}
+.B .chip{height:54px;padding:0 24px;border:2px solid var(--ink);border-radius:27px;display:flex;align-items:center;font-size:22px;font-weight:500;gap:10px}
+.B .chip.on{background:var(--ink);color:#fff}
+.B .chip small{font-size:18px;color:var(--g2)}
+.B .chip.on small{color:#ccc}
+.B h2{font-size:32px;font-weight:700;letter-spacing:-.015em;margin:26px 0 14px;display:flex;justify-content:space-between;align-items:baseline}
+.B h2 small{font-size:20px;font-weight:500;color:var(--g1)}
+.B .car{display:flex;gap:22px}
+.B .card .thumb{border:2px solid var(--ink);border-radius:22px;aspect-ratio:3/4}
+.B .card .t{font-size:24px;font-weight:600;margin-top:12px;letter-spacing:-.01em;line-height:1.2}
+.B .card .d{font-size:18px;color:var(--g1);margin-top:2px}
+.B .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px 22px}
+.B .pill{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);height:76px;padding:0 36px;border-radius:38px;background:var(--ink);color:#fff;display:flex;align-items:center;gap:14px;font-size:27px;font-weight:600;border:4px solid var(--paper)}
+.B.land{display:grid;grid-template-columns:330px 1fr;padding:0}
+.B .side{border-right:2px solid var(--ink);padding:44px 26px;background:var(--paper)}
+.B .side h4{font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:var(--g1);margin:30px 8px 10px}
+.B .side .it{display:flex;justify-content:space-between;align-items:center;height:62px;border-radius:14px;padding:0 18px;font-size:24px;font-weight:500}
+.B .side .it.on{background:var(--ink);color:#fff}
+.B .side .it span{color:var(--g1);font-size:20px}.B .side .it.on span{color:#ccc}
+.B .main{padding:44px 44px}
+.B.land .grid{grid-template-columns:repeat(4,1fr);gap:24px 20px}
+.B.land h1{margin-top:0}
+/* ---------- C  GAZETE ---------- */
+.C{font-family:Georgia,"Times New Roman",serif;padding:46px 56px}
+.C .meta{display:flex;justify-content:space-between;font:600 14px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:var(--g1);padding-bottom:12px;border-bottom:1.5px solid var(--ink)}
+.C h1{font-size:118px;font-weight:700;text-align:center;letter-spacing:-.03em;line-height:1;margin:14px 0 8px}
+.C .dbl{border-top:5px solid var(--ink);border-bottom:1.5px solid var(--ink);height:11px}
+.C .nav{display:flex;justify-content:center;gap:0;font:600 17px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase;padding:14px 0;border-bottom:1.5px solid var(--ink)}
+.C .nav span{padding:0 22px;border-right:1.5px solid var(--g2)}.C .nav span:last-child{border:0}
+.C .nav .on{background:var(--ink);color:#fff;padding:6px 22px;margin:-6px 0}
+.C .lead{display:grid;grid-template-columns:350px 1fr;gap:34px;padding:26px 0;border-bottom:1.5px solid var(--ink)}
+.C .lead .thumb{height:470px;border:2px solid var(--ink)}
+.C .kick{font:700 14px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:var(--g1)}
+.C .lead h2{font-size:64px;line-height:1.02;letter-spacing:-.025em;margin:14px 0 14px}
+.C .lead p{font-size:26px;font-style:italic;line-height:1.35;color:#222}
+.C .by{font:500 16px/1 -apple-system,Helvetica,Arial,sans-serif;color:var(--g1);margin-top:18px;letter-spacing:.04em}
+.C .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.C .st{padding:20px 22px 22px;border-right:1.5px solid var(--g2)}
+.C .st:first-child{padding-left:0}.C .st:last-child{border:0;padding-right:0}
+.C .st .thumb{height:200px;border:1.5px solid var(--ink)}
+.C .st h3{font-size:30px;line-height:1.1;margin:12px 0 6px;letter-spacing:-.015em}
+.C .st .d{font:600 13px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--g1)}
+.C .box{border:2.5px solid var(--ink);padding:16px 20px;margin-top:6px;display:flex;gap:22px;align-items:center}
+.C .box .kick{writing-mode:vertical-rl;transform:rotate(180deg)}
+.C .box h3{font-size:30px}
+.C .new{text-align:center;font:600 15px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.24em;text-transform:uppercase;margin-top:22px;color:var(--ink)}
+.C .new b{display:inline-block;border:2.5px solid var(--ink);padding:16px 40px;font-size:18px}
+.C.land{padding:36px 50px;display:grid;grid-template-columns:1fr 330px;grid-template-rows:auto 1fr;column-gap:40px}
+.C.land .head{grid-column:1/3}
+.C.land h1{text-align:left;font-size:100px;margin:6px 0 8px}
+.C.land .lead{grid-template-columns:300px 1fr;padding:20px 0}
+.C.land .lead .thumb{height:380px}
+.C.land .lead h2{font-size:56px}
+.C.land .cols{grid-template-columns:repeat(2,1fr)}
+.C.land .st .thumb{height:150px}
+.C.land .st:nth-child(2n){border:0;padding-right:0}
+.C.land .st:nth-child(2n+1){padding-left:0}
+.C .rail{border-left:1.5px solid var(--ink);padding-left:30px}
+.C .rail h4{font:700 14px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase;border-bottom:1.5px solid var(--ink);padding:0 0 10px;margin:10px 0 12px}
+.C .rail .tp{display:flex;justify-content:space-between;font-size:28px;padding:10px 0;border-bottom:1px solid var(--g2)}
+.C .rail .tp span{font:600 17px/1 -apple-system,Helvetica,Arial,sans-serif;color:var(--g1);align-self:center}
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Aragonite ana ekran: 3 yön</h1>
+  <p>Boox Go 10.3 ekranında dikey ve yatay görünüm. Notlar gerçek (küçük resimler tabletinden), konu sayıları örnektir (SENTETİK). Büyütmek için bir ekrana dokun.</p>
+  <div class="spec"><span>992 × 1323 dp (1860 × 2480 px, 300 dpi)</span><span>Siyah, beyaz ve 3 gri</span><span>Gölge, geçiş, animasyon yok</span><span>Tüm ölçüler dp, Compose'a doğrudan çevrilir</span></div>
+</header>
+<main id="app"></main>
+<div class="note"><h3>Hepsinde ortak kararlar</h3><ul>
+<li>Küçük resim notun <b>üst kısmını</b> gösterir (uzun notlarda ilk satırlar okunur).</li>
+<li>Emoji yok, ikonlar düz çizgi. Gri dolgu yalnızca arama alanı ve düğmelerde, başka yerde 2 dp çizgi kullanılır (e-ink gri dolguyu noktalı basar).</li>
+<li>Ana işlem (Yeni not) her yönde tek siyah dolgulu öğedir.</li>
+<li>Konu sayıları şimdilik örnek: bugün konular yalnızca notta <code>#etiket</code> yazılınca doluyor.</li></ul></div>
+<div id="ov"></div>
+<script>
+const IMG={gun:"{{GUN}}",fin:"{{FIN}}",thy:"{{THY}}",i1:"{{I1}}",i2:"{{I2}}"};
+const N={
+ thy:{t:"THY Rapor",d:"12 Eki 13:18",ex:"Senaryo ve senaryo aralıkları gereksiz.",img:IMG.thy},
+ fin:{t:"Yeni Finans Ürün Planı",d:"28 Eyl 11:26",ex:"Rasyonetle anlaşma, rapor üretimi, custom dashboardlar, hazır değerleme modelleri…",img:IMG.fin},
+ i1:{t:"İsimsiz Not",d:"16 Eyl 11:12",ex:"",img:IMG.i1},
+ gun:{t:"Gün 1- 14 Eylül",d:"14 Eyl 10:46",ex:"Vekil hesapları, Rasyonet için belge, Cronus'a güncelleme…",img:IMG.gun},
+ i2:{t:"İsimsiz Not",d:"13 Eyl 23:31",ex:"",img:IMG.i2}};
+const T=[["papara",2],["laplace",1],["rasyonet",1]];
+const th=(n,cls="")=>`<div class="thumb ${cls}"><img src="${n.img}" alt=""></div>`;
+const plus='<i class="ico plus"></i>',lines='<i class="ico lines"></i>',mag='<i class="ico mag"></i>';
+
+function A(land){const rows=["thy","fin","i1","gun","i2"].slice(0,land?4:5).map((k,i)=>`<div class="li"><div class="n">${String(i+1).padStart(2,"0")}</div>${th(N[k])}<div class="t">${N[k].t}</div><div class="d">${N[k].d}</div></div>`).join("");
+ const keys=T.map(([n,c])=>`<div class="key"><b>${c}</b><span>#${n}</span></div>`).join("")+`<div class="key add">${plus}</div>`;
+ const head=`<div><div class="top"><div><div class="brand">aragonite</div><h1>Notlar</h1><div class="sub">5 not · 1 sabit · 3 konu</div></div>${land?"":`<div class="ctl"><div class="btn on"><i>${plus}</i>Yeni</div><div class="btn"><i>${lines}</i>Ayar</div></div>`}</div>`;
+ const pin=`<h3><b>01</b>Sabitlenen</h3><div class="pin">${th(N.fin)}<div><h4>${N.fin.t}</h4><p>${N.fin.d} · 1 sayfa</p></div></div>`;
+ const recent=`<h3><b>02</b>Son notlar</h3>${rows}`;
+ const topics=`<h3><b>03</b>Konular</h3><div class="keys">${keys}</div>`;
+ if(!land)return `<div class="screen A">${head}<div class="rule"></div></div>${pin}${recent}${topics}</div>`.replace('</div></div>${','</div>${');
+ return ""}
+</script>
+</body></html>

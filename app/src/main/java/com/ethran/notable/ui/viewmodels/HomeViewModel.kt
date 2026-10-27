@@ -7,6 +7,8 @@ import com.ethran.notable.data.db.Page
 import com.ethran.notable.data.db.PageRepository
 import com.ethran.notable.data.db.TagPriority
 import com.ethran.notable.data.db.TagPriorityDao
+import com.ethran.notable.data.datastore.GlobalAppSettings
+import com.ethran.notable.io.ExportedExcerpts
 import com.ethran.notable.io.ThumbnailGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +31,9 @@ data class HomeUiState(
     val topicGroups: List<TopicGroup> = emptyList(),
     val isLoading: Boolean = true,
     /** Bumped whenever a missing thumbnail has been created, so cards reload their image. */
-    val thumbRevision: Int = 0
+    val thumbRevision: Int = 0,
+    /** Page id -> first lines of its exported note (only pages that have been exported). */
+    val excerpts: Map<String, String> = emptyMap()
 )
 
 @HiltViewModel
@@ -42,6 +46,12 @@ class HomeViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    /** Topic the Home list is filtered by; null shows the latest notes. */
+    private val _selectedTopic = MutableStateFlow<String?>(null)
+    val selectedTopic: StateFlow<String?> = _selectedTopic.asStateFlow()
+
+    fun selectTopic(tag: String?) { _selectedTopic.value = tag }
 
     private val _inputTag = MutableStateFlow("")
     val inputTag: StateFlow<String> = _inputTag.asStateFlow()
@@ -74,12 +84,18 @@ class HomeViewModel @Inject constructor(
                         TopicGroup(tag = tag, pages = pages)
                     }.sortedBy { sortedTags[it.tag] ?: Int.MAX_VALUE }
 
+                    val allPages = (pinned + recent + groups.flatMap { it.pages }).distinctBy { it.id }
+                    val excerpts = try {
+                        ExportedExcerpts.load(ExportedExcerpts.inboxDir(GlobalAppSettings.current.obsidianInboxPath), allPages)
+                    } catch (e: Exception) { emptyMap() }
+                    if (_selectedTopic.value != null && groups.none { it.tag == _selectedTopic.value }) _selectedTopic.value = null
                     _uiState.value = HomeUiState(
                         pinnedPages = pinned,
                         recentPages = recent,
                         topicGroups = groups,
                         isLoading = false,
-                        thumbRevision = _uiState.value.thumbRevision
+                        thumbRevision = _uiState.value.thumbRevision,
+                        excerpts = excerpts
                     )
                     generateMissingThumbnails((pinned + recent + groups.flatMap { it.pages }).map { it.id }.distinct())
                 }
