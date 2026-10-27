@@ -29,6 +29,9 @@ check(not missing, f"expected words present, missing: {missing}")
 hard = ["operasyon", "sofistike", "stratejiler", "trendde"]   # lost when the recognizer crashed on that block
 check(any(w in norm for w in hard), f"at least one word from the block that used to crash the recognizer ({hard})")
 check("could not be recognized" not in text, "no 'could not be recognized' placeholder")
+struck = re.findall(r"~~[^~\n]+~~", text)
+check(len(struck) >= 5, f"struck-through lines are marked ~~like this~~ (found {len(struck)}, expected >= 5)")
+check("satranc" in norm, "text under a strike line is readable (Satranç)")
 
 # --- image ---
 m = re.search(r"!\[[^\]]*\]\(([^)]+)\)", md)

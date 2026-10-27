@@ -128,7 +128,8 @@ object OnyxHWREngine {
         strokes: List<Stroke>,
         viewWidth: Float,
         viewHeight: Float,
-        offsetY: Float = 0f
+        offsetY: Float = 0f,
+        strikes: List<InkBox> = emptyList()
     ): String? {
         val svc = service ?: return null
         if (strokes.isEmpty()) return ""
@@ -163,7 +164,7 @@ object OnyxHWREngine {
 
                                 val json = readPfdAsString(resultPfd)
                                 resultPfd.close()
-                                val text = parseHwrResult(json)
+                                val text = parseHwrResult(json, strokes, strikes)
                                 log.i("OnyxHWR recognized ${text.length} chars")
                                 cont.resume(text)
                             } catch (e: Exception) {
@@ -202,7 +203,7 @@ object OnyxHWREngine {
      * Parse the JSON result from the HWR service.
      * Success response: HWROutputData JSON with result.label containing recognized text.
      */
-    private fun parseHwrResult(json: String): String {
+    private fun parseHwrResult(json: String, strokes: List<Stroke>, strikes: List<InkBox>): String {
         return try {
             val obj = JSONObject(json)
             // Check for error
@@ -219,19 +220,31 @@ object OnyxHWREngine {
                 val label = result.optString("label", "")
                 val g = glossary
                 val wordsJson = result.optJSONArray("words")
-                if (g != null && !g.isEmpty() && wordsJson != null && wordsJson.length() > 0) {
+                val useGlossary = g != null && !g.isEmpty()
+                if ((useGlossary || strikes.isNotEmpty()) && wordsJson != null && wordsJson.length() > 0) {
                     val words = (0 until wordsJson.length()).mapNotNull { i ->
                         val w = wordsJson.optJSONObject(i) ?: return@mapNotNull null
                         val candidates = w.optJSONArray("candidates")
+                        val bb = w.optJSONObject("bounding-box")
                         HwrWord(
                             label = w.optString("label", ""),
                             candidates = if (candidates == null) emptyList()
-                            else (0 until candidates.length()).map { candidates.optString(it) }
+                            else (0 until candidates.length()).map { candidates.optString(it) },
+                            box = bb?.let {
+                                MmBox(it.optDouble("x").toFloat(), it.optDouble("y").toFloat(),
+                                    it.optDouble("width").toFloat(), it.optDouble("height").toFloat())
+                            }
                         )
                     }
-                    val rebuilt = HwrWordCorrector.rebuild(words, g)
-                    // Only trust the rebuilt text when it is the same text with some words swapped.
-                    if (rebuilt.isNotBlank() && rebuilt.replace(Regex("\\s+"), "").length >=
+                    val texts = HwrWordCorrector.correctAll(words, if (useGlossary) g else null)
+                    val ink = InkBox(
+                        strokes.minOf { it.left }, strokes.minOf { it.top },
+                        strokes.maxOf { it.right }, strokes.maxOf { it.bottom }
+                    )
+                    val struck = HwrStrikeMarker.struckFlags(words, ink, strikes)
+                    val rebuilt = HwrStrikeMarker.render(texts, struck)
+                    // Only trust the rebuilt text when it is the same text with words swapped or marked.
+                    if (rebuilt.isNotBlank() && rebuilt.replace("~~", "").replace(Regex("\\s+"), "").length >=
                         label.replace(Regex("\\s+"), "").length * 0.8
                     ) return rebuilt
                 }
@@ -254,8 +267,14 @@ object OnyxHWREngine {
     suspend fun recognizeStrokesChunked(context: Context, strokes: List<Stroke>): String {
         val deadline = System.currentTimeMillis() + PAGE_BUDGET_MS
         val texts = mutableListOf<String>()
-        for ((index, chunk) in HwrChunker.chunkByLines(strokes).withIndex()) {
-            val text = recognizeChunk(context, chunk, "$index", deadline)
+        // Lines drawn through text garble the whole line: keep them out of recognition and mark the words.
+        val split = HwrStrikeDetector.split(strokes)
+        if (com.ethran.notable.BuildConfig.SIDE_BY_SIDE) split.trace.forEach { log.i("STRIKE? $it") }
+        if (split.strikes.isNotEmpty() || split.ignored.isNotEmpty()) {
+            log.i("Strike-through lines: ${split.strikes.size}, dropped rules/underlines: ${split.ignored.size}")
+        }
+        for ((index, chunk) in HwrChunker.chunkByLines(split.text).withIndex()) {
+            val text = recognizeChunk(context, chunk, "$index", deadline, split.strikes)
             if (!text.isNullOrBlank()) texts.add(text.trim())
         }
         return texts.joinToString("\n")
@@ -271,7 +290,8 @@ object OnyxHWREngine {
         context: Context,
         chunk: List<Stroke>,
         label: String,
-        deadline: Long
+        deadline: Long,
+        strikes: List<InkBox> = emptyList()
     ): String? {
         if (System.currentTimeMillis() > deadline) {
             log.w("OnyxHWR page budget used up, skipping chunk $label")
@@ -287,7 +307,7 @@ object OnyxHWREngine {
 
         val text = if (bindAndAwait(context)) {
             try {
-                recognizeStrokes(chunk, viewWidth, viewHeight, offsetY)
+                recognizeStrokes(chunk, viewWidth, viewHeight, offsetY, strikes)
             } catch (e: Exception) {
                 log.e("OnyxHWR chunk $label failed: ${e.message}")
                 null
@@ -301,8 +321,8 @@ object OnyxHWREngine {
             return null
         }
         log.w("OnyxHWR chunk $label failed, retrying as two halves")
-        val first = recognizeChunk(context, halves.first, "$label.a", deadline)
-        val second = recognizeChunk(context, halves.second, "$label.b", deadline)
+        val first = recognizeChunk(context, halves.first, "$label.a", deadline, strikes)
+        val second = recognizeChunk(context, halves.second, "$label.b", deadline, strikes)
         return listOfNotNull(first?.trim(), second?.trim()).filter { it.isNotEmpty() }
             .joinToString("\n").ifEmpty { null }
     }

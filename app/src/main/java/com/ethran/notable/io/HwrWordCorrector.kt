@@ -1,7 +1,7 @@
 package com.ethran.notable.io
 
 /** One recognized word with the alternatives the Onyx/MyScript engine offered for it. */
-data class HwrWord(val label: String, val candidates: List<String> = emptyList())
+data class HwrWord(val label: String, val candidates: List<String> = emptyList(), val box: MmBox? = null)
 
 /**
  * The user's own vocabulary: names, companies, English terms the engine tends to get wrong.
@@ -98,6 +98,10 @@ object HwrWordCorrector {
 
     fun rebuild(words: List<HwrWord>, glossary: HwrGlossary): String =
         words.joinToString("") { if (it.label.isBlank()) it.label else correctWord(it, glossary) }
+
+    /** Corrected word texts, one per input word (blank words stay as they are). */
+    fun correctAll(words: List<HwrWord>, glossary: HwrGlossary?): List<String> =
+        words.map { if (it.label.isBlank() || glossary == null) it.label else correctWord(it, glossary) }
 
     fun correctWord(word: HwrWord, glossary: HwrGlossary): String {
         if (glossary.isEmpty()) return word.label
