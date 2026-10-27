@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import com.ethran.notable.APP_SETTINGS_KEY
+import com.ethran.notable.BuildConfig
 import com.ethran.notable.data.datastore.AppSettings
 import com.ethran.notable.io.createFileFromContentUri
 import com.ethran.notable.io.isImageUri
@@ -17,7 +18,8 @@ import java.io.File
 fun getDbDir(): File {
     val documentsDir =
         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-    val dbDir = File(documentsDir, "notabledb")
+    // Debug builds use their own folder so tests never touch real notes.
+    val dbDir = File(documentsDir, if (BuildConfig.DEBUG) "notabledb-debug" else "notabledb")
     if (!dbDir.exists()) {
         dbDir.mkdirs()
     }

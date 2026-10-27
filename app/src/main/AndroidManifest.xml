@@ -42,7 +42,7 @@
 
         <provider
             android:name="com.ethran.notable.editor.utils.Provider"
-            android:authorities="io.aragonite.notes.provider"
+            android:authorities="${applicationId}.provider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

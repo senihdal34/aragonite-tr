@@ -17,3 +17,6 @@ local.properties
 
 # Gradle daemon config (machine-specific)
 gradle/gradle-daemon-jvm.properties
+.e2e-shots/
+
+.e2e-seed/

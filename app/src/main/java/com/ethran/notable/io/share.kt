@@ -40,7 +40,7 @@ fun shareBitmap(context: Context, bitmap: Bitmap) {
     val bitmapFile = File(cachePath, "share.png")
     val contentUri = FileProvider.getUriForFile(
         context,
-        "io.aragonite.notes.provider", //(use your app signature + ".provider" )
+        "${context.packageName}.provider",
         bitmapFile
     )
 
@@ -102,7 +102,7 @@ private fun saveBitmapToCache(context: Context, bitmap: Bitmap): Uri? {
     val bitmapFile = File(cachePath, "share.png")
     return FileProvider.getUriForFile(
         context,
-        "io.aragonite.notes.provider", //(use your app signature + ".provider" )
+        "${context.packageName}.provider",
         bitmapFile
     )
 }
