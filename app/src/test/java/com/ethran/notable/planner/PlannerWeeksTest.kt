@@ -30,12 +30,30 @@ class PlannerWeeksTest {
         assertEquals(100, PlannerWeeks.yearPercent(LocalDate.of(2026, 12, 31)))
     }
 
-    @Test fun `legacy background strings still parse`() {
+    @Test fun `weeks to ensure start with this week and run eight weeks ahead`() {
+        val weeks = PlannerWeeks.weeksToEnsure(LocalDate.of(2026, 10, 30))
+        assertEquals(9, weeks.size)
+        assertEquals(LocalDate.of(2026, 10, 26), weeks.first())
+        assertEquals(LocalDate.of(2026, 12, 21), weeks.last())
+    }
+
+    @Test fun `background string round trip`() {
         val monday = LocalDate.of(2026, 10, 26)
+        assertEquals(monday, PlannerWeeks.parseWeek(PlannerWeeks.weekBackground(monday)))
         assertEquals(monday, PlannerWeeks.parseTodo("planner-todo:2026-10-26"))
-        assertEquals(monday, PlannerWeeks.parseLegacyWeek("planner-week:2026-10-26"))
-        assertNull(PlannerWeeks.parseLegacyWeek("planner-week:not-a-date"))
-        assertNull(PlannerWeeks.parseTodo("inbox"))
+        assertNull(PlannerWeeks.parseWeek("planner-week:not-a-date"))
+        assertNull(PlannerWeeks.parseWeek("inbox"))
+    }
+
+    @Test fun `planner pages sort by week`() {
+        val monday = LocalDate.of(2026, 10, 26)
+        val order = listOf(PlannerWeeks.weekBackground(monday.plusWeeks(2)), PlannerWeeks.weekBackground(monday), PlannerWeeks.weekBackground(monday.minusWeeks(1)))
+            .sortedBy { PlannerWeeks.sortKey(it) }
+        assertEquals(
+            listOf(PlannerWeeks.weekBackground(monday.minusWeeks(1)), PlannerWeeks.weekBackground(monday), PlannerWeeks.weekBackground(monday.plusWeeks(2))),
+            order
+        )
+        assertNull(PlannerWeeks.sortKey("blank"))
     }
 
     @Test fun `iso week 53 in 2026`() =

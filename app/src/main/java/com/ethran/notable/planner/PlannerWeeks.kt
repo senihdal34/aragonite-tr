@@ -7,10 +7,13 @@ import java.time.temporal.TemporalAdjusters
 
 /** Dates and labels of the weekly planner. Everything comes from the device clock, no network. */
 object PlannerWeeks {
+    /** One handwritten page per week: seven day rows with at least five to-do lines each. */
+    const val WEEK_PREFIX = "planner-week:"
+    /** To-do/notes page of the first version; no longer created, pages that have ink still draw. */
     const val TODO_PREFIX = "planner-todo:"
-    /** Handwritten week and to-do pages of the first planner version; replaced by the typed Week screen. */
-    const val LEGACY_WEEK_PREFIX = "planner-week:"
     const val NOTEBOOK_TITLE = "Planlayıcı"
+    /** Weeks created in advance after the current one, so swiping to the next page stays inside the planner. */
+    const val WEEKS_AHEAD = 8
 
     val DAY_NAMES = listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
     val DAY_FULL = listOf("Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar")
@@ -21,9 +24,21 @@ object PlannerWeeks {
 
     fun mondayOf(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 
+    fun weekBackground(monday: LocalDate) = WEEK_PREFIX + monday
+
+    /** Mondays of the weeks that exist from the start: this week and the next [ahead] weeks. */
+    fun weeksToEnsure(today: LocalDate, ahead: Int = WEEKS_AHEAD): List<LocalDate> {
+        val first = mondayOf(today)
+        return (0..ahead).map { first.plusWeeks(it.toLong()) }
+    }
+
+    /** Sort key that keeps the planner notebook in date order. */
+    fun sortKey(background: String): Long? =
+        (parseWeek(background) ?: parseTodo(background))?.let { mondayOf(it).toEpochDay() }
+
 
     fun parseTodo(background: String): LocalDate? = parse(background, TODO_PREFIX)
-    fun parseLegacyWeek(background: String): LocalDate? = parse(background, LEGACY_WEEK_PREFIX)
+    fun parseWeek(background: String): LocalDate? = parse(background, WEEK_PREFIX)
     fun isPlanner(background: String) = background.startsWith("planner-")
 
     private fun parse(background: String, prefix: String): LocalDate? =

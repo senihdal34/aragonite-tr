@@ -13,8 +13,8 @@ import java.time.LocalDate
 
 private const val HEADER_H = 150f
 private const val LABEL_W = 250f
-private const val LINES_PER_DAY = 4
-private const val BOTTOM_MARGIN = 80f   // keeps the last row clear of the scroll indicator
+private const val LINES_PER_DAY = 5   // at least five to-dos per day
+private const val LINE_STEP = 72f
 private val TR = java.util.Locale("tr", "TR")
 
 private val serifBold = Typeface.create(Typeface.SERIF, Typeface.BOLD)
@@ -33,6 +33,8 @@ private val guide = paint(Color.GRAY, 1.5f)
 private val box = paint(Color.BLACK, 3f, Paint.Style.STROKE)
 private val fillInk = paint(Color.BLACK)
 private val titleP = paint(Color.BLACK, size = 66f, face = serifBold)
+private val summary = paint(Color.DKGRAY, size = 26f, face = sansBold).apply { textAlign = Paint.Align.RIGHT; letterSpacing = 0.08f }
+private val summaryBold = paint(Color.BLACK, size = 30f, face = sansBold).apply { textAlign = Paint.Align.RIGHT; letterSpacing = 0.1f }
 private val subP = paint(Color.DKGRAY, size = 34f, face = sansBold).apply { textAlign = Paint.Align.RIGHT; letterSpacing = 0.08f }
 private val dayName = paint(Color.BLACK, size = 36f, face = sansBold).apply { textAlign = Paint.Align.CENTER; letterSpacing = 0.12f }
 private val dayNameInv = paint(Color.WHITE, size = 36f, face = sansBold).apply { textAlign = Paint.Align.CENTER; letterSpacing = 0.12f }
@@ -44,33 +46,43 @@ private fun checkbox(canvas: Canvas, x: Float, bottom: Float, size: Float = 34f)
     canvas.drawRect(x, bottom - size, x + size, bottom, box)
 }
 
-/** Old handwritten week page (kept so pages that already have ink still draw). Seven rows, one per day. Today's row is inverted; the date comes from the device clock. */
+/**
+ * Weekly planner page: seven day rows below each other, every row with [LINES_PER_DAY] check-box lines to write on.
+ * The layout is fixed in page pixels (it never depends on the screen height or on today's date), so ink stays
+ * on its line after a rotation or when the day changes. Only the black label block moves to today.
+ */
 fun drawPlannerWeekBg(canvas: Canvas, scroll: Offset, scale: Float, monday: LocalDate, today: LocalDate = LocalDate.now()) {
     val w = canvas.width / scale
-    val h = canvas.height / scale
     canvas.drawColor(Color.WHITE)
     val oy = -scroll.y
 
-    canvas.drawText("Haftalık plan", 60f, 100f + oy, titleP)
-    canvas.drawText(PlannerWeeks.weekLabel(monday).uppercase(TR), w - 60f, 98f + oy, subP)
+    canvas.drawText("Weekly Planner", 60f, 98f + oy, titleP)
+    // Small summary on the right: week of the year, date range, share of the year that has passed.
+    canvas.drawText("HAFTA ${PlannerWeeks.weekOfYear(monday)}", w - 60f, 50f + oy, summaryBold)
+    canvas.drawText("${PlannerWeeks.rangeLabel(monday)} · ${monday.plusDays(3).year}".uppercase(TR), w - 60f, 84f + oy, summary)
+    val percent = PlannerWeeks.yearPercent(today)
+    canvas.drawText("YIL %$percent TAMAMLANDI", w - 60f, 118f + oy, summary)
+    val barW = 300f
+    canvas.drawRect(w - 60f - barW, 128f + oy, w - 60f, 138f + oy, box)
+    canvas.drawRect(w - 60f - barW, 128f + oy, w - 60f - barW + barW * percent / 100f, 138f + oy, fillInk)
     canvas.drawRect(0f, HEADER_H - 8f + oy, w, HEADER_H + oy, fillInk)
 
-    val rowH = ((h - HEADER_H - BOTTOM_MARGIN) / 7f).coerceAtLeast(240f)
+    val rowH = LINES_PER_DAY * LINE_STEP
     for (i in 0 until 7) {
         val day = monday.plusDays(i.toLong())
         val y0 = HEADER_H + i * rowH + oy
         val y1 = y0 + rowH
         val isToday = day == today
         if (isToday) canvas.drawRect(0f, y0, LABEL_W, y1, fillInk)
-        canvas.drawText(PlannerWeeks.DAY_NAMES[i].uppercase(TR), LABEL_W / 2f, y0 + 56f, if (isToday) dayNameInv else dayName)
-        canvas.drawText(day.dayOfMonth.toString(), LABEL_W / 2f, y0 + rowH * 0.5f + 58f, if (isToday) dayNumInv else dayNum)
-        if (i < 6) canvas.drawLine(0f, y1, w, y1, ink)
+        canvas.drawText(PlannerWeeks.DAY_NAMES[i].uppercase(TR), LABEL_W / 2f, y0 + 60f, if (isToday) dayNameInv else dayName)
+        canvas.drawText(day.dayOfMonth.toString(), LABEL_W / 2f, y0 + rowH * 0.5f + 40f, if (isToday) dayNumInv else dayNum)
+        canvas.drawText(PlannerWeeks.monthName(day).uppercase(TR), LABEL_W / 2f, y1 - 34f, if (isToday) dayNameInv else dayName)
+        canvas.drawLine(0f, y1, w, y1, ink)
 
         // writing lines with a check box in front of each
-        val step = rowH / LINES_PER_DAY
         for (k in 1..LINES_PER_DAY) {
-            val ly = y0 + k * step
-            checkbox(canvas, LABEL_W + 28f, ly - 10f)
+            val ly = y0 + k * LINE_STEP
+            checkbox(canvas, LABEL_W + 28f, ly - 14f, 34f)
             if (k < LINES_PER_DAY) canvas.drawLine(LABEL_W + 28f, ly, w - 40f, ly, guide)
         }
     }

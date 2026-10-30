@@ -30,6 +30,12 @@ import com.ethran.notable.editor.ui.EditorSurface
 import com.ethran.notable.editor.ui.SIDEBAR_WIDTH
 import com.ethran.notable.editor.ui.HorizontalScrollIndicator
 import com.ethran.notable.editor.ui.InboxToolbar
+import com.ethran.notable.editor.ui.PlannerWeekBar
+import com.ethran.notable.editor.canvas.CanvasEventBus
+import androidx.compose.ui.Alignment
+import com.ethran.notable.planner.PlannerService
+import com.ethran.notable.planner.PlannerWeeks
+import java.time.LocalDate
 import com.ethran.notable.editor.ui.ScrollIndicator
 import com.ethran.notable.editor.ui.SelectedBitmap
 import com.ethran.notable.gestures.EditorGestureReceiver
@@ -152,6 +158,7 @@ fun EditorView(
 
         // Inbox mode detection — query DB since pageFromDb loads async
         var isInboxPage by remember { mutableStateOf(false) }
+        var plannerMonday by remember(pageId) { mutableStateOf<LocalDate?>(null) }
         val selectedTags = remember { mutableStateListOf<String>() }
         // Read tags reactively — updates when VaultTagScanner.refreshCache() runs
         val suggestedTags = VaultTagScanner.cachedTags
@@ -163,6 +170,16 @@ fun EditorView(
             val inbox = pageData?.background == "inbox"
             isInboxPage = inbox
             editorState.isInboxPage = inbox
+            plannerMonday = pageData?.background?.let(PlannerWeeks::parseWeek)
+        }
+
+        // Week tool of the planner page: move to another week's page inside this notebook.
+        val plannerService = remember { PlannerService(appRepository) }
+        fun goToWeek(monday: LocalDate) {
+            scope.launch {
+                val target = withContext(Dispatchers.IO) { runCatching { plannerService.ensureWeek(monday) }.getOrNull() }
+                if (target != null && target.pageId != pageId) CanvasEventBus.changePage.tryEmit(target.pageId)
+            }
         }
 
         DisposableEffect(Unit) {
@@ -247,6 +264,15 @@ fun EditorView(
                                 navController.popBackStack()
                             },
                             onDiscard = { navController.popBackStack() }
+                        )
+                    }
+                    plannerMonday?.let { monday ->
+                        PlannerWeekBar(
+                            isCurrentWeek = monday == PlannerWeeks.mondayOf(LocalDate.now()),
+                            onPrevious = { goToWeek(monday.minusWeeks(1)) },
+                            onThisWeek = { goToWeek(PlannerWeeks.mondayOf(LocalDate.now())) },
+                            onNext = { goToWeek(monday.plusWeeks(1)) },
+                            modifier = Modifier.align(Alignment.TopCenter)
                         )
                     }
                     HorizontalScrollIndicator(state = editorState)

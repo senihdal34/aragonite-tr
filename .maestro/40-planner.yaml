@@ -1,29 +1,20 @@
 appId: io.aragonite.notes.debug
 ---
-# Home opens on the Weekly Planner (week number, year progress, one column per day). A day opens in front of the
-# page with typed to-do lines that save as you type.
-# Week tools move the week; NOTLAR shows the note cards with delete and tag buttons; a topic can be deleted.
+# The app opens on the handwritten weekly planner page; the week tool moves between weeks, the home button leads
+# to Home. NOTLAR shows the note cards with delete and tag buttons; a topic can be deleted.
 - launchApp
+# start page: this week's handwritten page with the week tool in its header band
 - extendedWaitUntil:
-    visible: "WEEKLY PLANNER"
+    visible: "BU HAFTA"
     timeout: 40000
-- assertVisible: "YIL %.* TAMAMLANDI"
-- assertVisible: "HAFTA .*/5[23]"
-# open today in front of the page, write on the first line, tick it, add more lines, go back
-- tapOn: "Günü aç bugün"
-- tapOn: "Madde 1"
-- inputText: "e2egorev"
-- hideKeyboard
-- tapOn: "Tamamlandı işaretle"
-- scrollUntilVisible:
-    element: "\\+ 4 SATIR EKLE"
-- tapOn: "\\+ 4 SATIR EKLE"
-- assertVisible: "Madde 12"
-- tapOn: "← GERİ"
-- assertVisible: "e2egorev"
 - tapOn: "SONRAKİ ›"
+- tapOn: "‹ ÖNCEKİ"
+- tapOn: "‹ ÖNCEKİ"
 - tapOn: "BU HAFTA"
-- assertVisible: "BUGÜN.*"
+- tapOn: "home"
+- extendedWaitUntil:
+    visible: "NOTLAR"
+    timeout: 20000
 - tapOn: "NOTLAR"
 - extendedWaitUntil:
     visible: "# SEÇ"

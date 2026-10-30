@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# End-to-end test: Home opens on the week page, a typed to-do item is saved and ticked, a tag is added and the topic
-# deleted, a note is deleted.
+# End-to-end test: the app opens on the weekly planner page, the week tool moves between weeks, a tag is added and the
+# topic deleted, a note is deleted.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home}
@@ -25,10 +25,13 @@ adb shell am force-stop $PKG; sleep 2
 
 D=$(mktemp -d); adb pull /sdcard/Documents/notabledb-debug/. "$D" >/dev/null
 sqlite3 "$D/app_database" 'PRAGMA wal_checkpoint(TRUNCATE);' >/dev/null
-today=$(python3 -c "import datetime as d; print(d.date.today())")
-todo=$(sqlite3 "$D/app_database" "select value from Kv where key='todo:$today'")
+weeks=$(sqlite3 "$D/app_database" "select count(*) from Page where background like 'planner-week:%'")
 books=$(sqlite3 "$D/app_database" "select count(*) from Notebook where title='Planlayıcı'")
-planner_pages=$(sqlite3 "$D/app_database" "select count(*) from Page where background like 'planner-%'")
+monday=$(python3 -c "import datetime as d; t=d.date.today(); print(t-d.timedelta(days=t.weekday()))")
+prev=$(python3 -c "import datetime as d; t=d.date.today(); print(t-d.timedelta(days=t.weekday()+7))")
+cur=$(sqlite3 "$D/app_database" "select count(*) from Page where background='planner-week:$monday'")
+before=$(sqlite3 "$D/app_database" "select count(*) from Page where background='planner-week:$prev'")
+other=$(sqlite3 "$D/app_database" "select count(*) from Page where background like 'planner-%' and background not like 'planner-week:%'")
 notes=$(sqlite3 "$D/app_database" "select count(*) from Page where background='inbox'")
 tags=$(sqlite3 "$D/app_database" "select count(*) from Kv where key like 'pagetags:%' and value like '%e2etest%'")
 hidden=$(sqlite3 "$D/app_database" "select count(*) from Kv where key='hiddentopics' and value like '%e2etest%'")
@@ -36,10 +39,11 @@ rm -rf "$D"
 fail=0
 check() { if [ "$2" = "$3" ]; then echo "PASS  $1 ($2)"; else echo "FAIL  $1 (got $2, expected $3)"; fail=1; fi; }
 has() { if echo "$2" | grep -q "$3"; then echo "PASS  $1"; else echo "FAIL  $1 (got: $2)"; fail=1; fi; }
-has "to-do text saved for today" "$todo" "e2egorev"
-has "to-do marked done" "$todo" '"done":true'
-check "no planner notebook any more" "$books" 0
-check "no planner pages" "$planner_pages" 0
+check "one Planlayıcı notebook" "$books" 1
+check "week pages (this week, 8 ahead, last week made by the tool)" "$weeks" 10
+check "page for this week exists" "$cur" 1
+check "previous week was created by the tool" "$before" 1
+check "no other planner pages" "$other" 0
 check "one note deleted (seed has 5)" "$notes" 4
 check "deleted topic is off every note" "$tags" 0
 check "deleted topic is hidden" "$hidden" 1
