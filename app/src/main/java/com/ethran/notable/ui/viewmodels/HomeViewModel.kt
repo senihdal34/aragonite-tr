@@ -8,6 +8,7 @@ import com.ethran.notable.data.db.PageRepository
 import com.ethran.notable.data.db.PageTagRepository
 import com.ethran.notable.data.db.PlannerTodoRepository
 import com.ethran.notable.data.db.TodoItem
+import com.ethran.notable.io.ExportedExcerpts
 import com.ethran.notable.data.db.TagPriority
 import com.ethran.notable.data.db.TagPriorityDao
 import com.ethran.notable.data.datastore.GlobalAppSettings
@@ -56,8 +57,8 @@ data class HomeUiState(
     /** Page id -> tags attached from Home (stored apart from the #tag boxes drawn in a note). */
     val pageTags: Map<String, List<String>> = emptyMap(),
     val week: WeekUi = WeekUi(LocalDate.now(), PlannerWeeks.mondayOf(LocalDate.now())),
-    /** Id of a to-do item that was just added and should take the keyboard focus. */
-    val focusTodoId: String? = null
+    /** Page id -> first lines of its exported note (only pages that have been exported). */
+    val excerpts: Map<String, String> = emptyMap()
 )
 
 @HiltViewModel
@@ -96,33 +97,28 @@ class HomeViewModel @Inject constructor(
         weekJob?.cancel()
         weekJob = viewModelScope.launch(Dispatchers.IO) {
             val monday = _uiState.value.week.monday
-            val todos = try { todoRepository.week(monday) } catch (e: Exception) { return@launch }
+            val todos = try { todoRepository.week(monday).mapValues { PlannerTodoRepository.withSlots(it.value) } } catch (e: Exception) { return@launch }
             _uiState.update { it.copy(week = WeekUi(LocalDate.now(), monday, todos)) }
         }
     }
 
     // ---------- to-do items of a day (saved automatically) ----------
 
-    private fun editDay(day: LocalDate, change: (List<TodoItem>) -> List<TodoItem>, focus: String? = null) {
-        val next = change(_uiState.value.week.todos[day].orEmpty())
-        _uiState.update { it.copy(week = it.week.copy(todos = it.week.todos + (day to next)), focusTodoId = focus) }
-        todoRepository.save(day, next.filter { item -> item.text.isNotBlank() || item.id == focus })
-    }
-
-    fun addTodo(day: LocalDate) {
-        val item = TodoItem()
-        editDay(day, { it + item }, focus = item.id)
+    private fun editDay(day: LocalDate, change: (List<TodoItem>) -> List<TodoItem>) {
+        val next = change(_uiState.value.week.todos[day] ?: PlannerTodoRepository.withSlots(emptyList()))
+        _uiState.update { it.copy(week = it.week.copy(todos = it.week.todos + (day to next))) }
+        todoRepository.save(day, next)
     }
 
     fun editTodo(day: LocalDate, id: String, text: String) =
-        editDay(day, { list -> list.map { if (it.id == id) it.copy(text = text.replace("\n", " ")) else it } })
+        editDay(day) { list -> list.map { if (it.id == id) it.copy(text = text.replace("\n", " ")) else it } }
 
     fun toggleTodo(day: LocalDate, id: String) =
-        editDay(day, { list -> list.map { if (it.id == id) it.copy(done = !it.done) else it } })
+        editDay(day) { list -> list.map { if (it.id == id) it.copy(done = !it.done) else it } }
 
-    fun removeTodo(day: LocalDate, id: String) = editDay(day, { list -> list.filter { it.id != id } })
-
-    fun focusHandled() = _uiState.update { it.copy(focusTodoId = null) }
+    /** Adds a few more empty lines at the bottom of the day. */
+    fun addSlots(day: LocalDate) =
+        editDay(day) { list -> list + List(PlannerTodoRepository.SLOTS_PER_ADD) { TodoItem() } }
 
     /** Topic the Home list is filtered by; null shows the latest notes. */
     private val _selectedTopic = MutableStateFlow<String?>(null)
@@ -169,11 +165,14 @@ class HomeViewModel @Inject constructor(
                     }.sortedBy { sortedTags[it.tag] ?: Int.MAX_VALUE }
 
                     val allPages = (pinned + recent + groups.flatMap { it.pages }).distinctBy { it.id }
+                    val excerpts = try {
+                        ExportedExcerpts.load(ExportedExcerpts.inboxDir(GlobalAppSettings.current.obsidianInboxPath), (pinned + recent + groups.flatMap { it.pages }).distinctBy { it.id })
+                    } catch (e: Exception) { emptyMap() }
                     if (_selectedTopic.value != null && groups.none { it.tag == _selectedTopic.value }) _selectedTopic.value = null
                     _uiState.update {
                         it.copy(
                             pinnedPages = pinned, recentPages = recent, topicGroups = groups,
-                            isLoading = false, pageTags = pageTags
+                            isLoading = false, pageTags = pageTags, excerpts = excerpts
                         )
                     }
                     generateMissingThumbnails((pinned + recent + groups.flatMap { it.pages }).map { it.id }.distinct())

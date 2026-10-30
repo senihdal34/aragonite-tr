@@ -38,8 +38,9 @@ class PlannerTodoRepository @Inject constructor(private val dao: KvDao) {
     suspend fun week(monday: LocalDate): Map<LocalDate, List<TodoItem>> =
         (0L..6L).map { monday.plusDays(it) }.associateWith { get(it) }
 
-    /** Remembers the list now and writes it after [SAVE_DELAY_MS] without further changes. */
-    fun save(day: LocalDate, items: List<TodoItem>) {
+    /** Remembers the list now and writes it after [SAVE_DELAY_MS] without further changes. Empty slots at the end are not stored. */
+    fun save(day: LocalDate, all: List<TodoItem>) {
+        val items = all.dropLastWhile { it.text.isBlank() && !it.done }
         synchronized(latest) { latest[day] = items }
         synchronized(jobs) {
             jobs[day]?.cancel()
@@ -53,5 +54,12 @@ class PlannerTodoRepository @Inject constructor(private val dao: KvDao) {
     companion object {
         private const val KEY = "todo:"
         const val SAVE_DELAY_MS = 300L
+        /** Empty lines every day starts with; more can be added with a button. */
+        const val DEFAULT_SLOTS = 8
+        const val SLOTS_PER_ADD = 4
+
+        /** The stored items plus empty lines up to [DEFAULT_SLOTS]. */
+        fun withSlots(items: List<TodoItem>, minimum: Int = DEFAULT_SLOTS): List<TodoItem> =
+            items + List((minimum - items.size).coerceAtLeast(0)) { TodoItem() }
     }
 }

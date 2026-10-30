@@ -1,18 +1,26 @@
 appId: io.aragonite.notes.debug
 ---
-# Home opens on the HAFTA page (week number, year progress, one column per day with typed to-do items).
+# Home opens on the Weekly Planner (week number, year progress, one column per day). A day opens in front of the
+# page with typed to-do lines that save as you type.
 # Week tools move the week; NOTLAR shows the note cards with delete and tag buttons; a topic can be deleted.
 - launchApp
 - extendedWaitUntil:
-    visible: "YIL %.* TAMAMLANDI"
+    visible: "WEEKLY PLANNER"
     timeout: 40000
-- assertVisible: "BUGÜN.*"
-- assertVisible: ".*/5[23]"
-# a to-do item on today, saved automatically
-- tapOn: "Madde ekle bugün"
+- assertVisible: "YIL %.* TAMAMLANDI"
+- assertVisible: "HAFTA .*/5[23]"
+# open today in front of the page, write on the first line, tick it, add more lines, go back
+- tapOn: "Günü aç bugün"
+- tapOn: "Madde 1"
 - inputText: "e2egorev"
 - hideKeyboard
 - tapOn: "Tamamlandı işaretle"
+- scrollUntilVisible:
+    element: "\\+ 4 SATIR EKLE"
+- tapOn: "\\+ 4 SATIR EKLE"
+- assertVisible: "Madde 12"
+- tapOn: "← GERİ"
+- assertVisible: "e2egorev"
 - tapOn: "SONRAKİ ›"
 - tapOn: "BU HAFTA"
 - assertVisible: "BUGÜN.*"

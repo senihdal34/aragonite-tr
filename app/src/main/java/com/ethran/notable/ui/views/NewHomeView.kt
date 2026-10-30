@@ -67,11 +67,20 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.Icon
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.ethran.notable.data.db.TodoItem
+import com.ethran.notable.data.db.PlannerTodoRepository
+import com.ethran.notable.ui.viewmodels.WeekUi
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
@@ -101,6 +110,7 @@ private val Paper = Color(0xFFF6F6F2)
 private val Sans = FontFamily.SansSerif
 private val Serif = FontFamily.Serif
 private val TR = Locale("tr", "TR")
+private val Pill = androidx.compose.foundation.shape.RoundedCornerShape(50)
 
 @Composable
 fun HomeView(
@@ -134,6 +144,7 @@ fun HomeView(
     var confirmDelete by remember { mutableStateOf<String?>(null) }
     var pickerInput by remember { mutableStateOf("") }
     var deletingTopic by remember { mutableStateOf<String?>(null) }
+    var openDay by remember { mutableStateOf<LocalDate?>(null) }
     val thumbDir = File(LocalContext.current.filesDir, "pages/previews/thumbs")
 
     val actions = HomeActions(
@@ -148,11 +159,10 @@ fun HomeView(
         unpin = { id -> viewModel.togglePin(id, true) },
         section = viewModel::selectSection,
         shiftWeek = viewModel::shiftWeek,
-        addTodo = viewModel::addTodo,
+        openDay = { openDay = it },
         editTodo = viewModel::editTodo,
         toggleTodo = viewModel::toggleTodo,
-        removeTodo = viewModel::removeTodo,
-        focusHandled = viewModel::focusHandled,
+        addSlots = viewModel::addSlots,
         deletingTopic = deletingTopic,
         askDeleteTopic = { tag -> deletingTopic = tag },
         tagsOpen = tagsOpen,
@@ -175,16 +185,18 @@ fun HomeView(
         }
     )
 
+    openDay?.let { day -> DayDialog(day, state.week.todos[day].orEmpty(), actions) { openDay = null } }
+
     BoxWithConstraints(Modifier.fillMaxSize().background(Paper)) {
         val landscape = maxWidth > maxHeight
         val scroll = rememberScrollState()
         Column(
-            Modifier.fillMaxSize().verticalScroll(scroll)
+            (if (section == HomeSection.Week) Modifier.fillMaxSize() else Modifier.fillMaxSize().verticalScroll(scroll))
                 .padding(horizontal = if (landscape) 50.dp else 56.dp, vertical = if (landscape) 34.dp else 44.dp)
         ) {
             Masthead(state, selected, section, landscape, actions, adding, input)
             if (section == HomeSection.Week) {
-                WeekPage(state, actions, landscape)
+                WeekPage(state, actions, Modifier.weight(1f))
             } else if (section == HomeSection.Pinned) {
                 PinnedPage(state, actions)
                 NewNoteButton(actions, Modifier.align(Alignment.CenterHorizontally).padding(top = 26.dp, bottom = 20.dp))
@@ -215,11 +227,10 @@ private class HomeActions(
     val unpin: (String) -> Unit,
     val section: (HomeSection) -> Unit,
     val shiftWeek: (Int) -> Unit,
-    val addTodo: (LocalDate) -> Unit,
+    val openDay: (LocalDate) -> Unit,
     val editTodo: (LocalDate, String, String) -> Unit,
     val toggleTodo: (LocalDate, String) -> Unit,
-    val removeTodo: (LocalDate, String) -> Unit,
-    val focusHandled: () -> Unit,
+    val addSlots: (LocalDate) -> Unit,
     val deletingTopic: String?,
     val askDeleteTopic: (String?) -> Unit,
     val tagsOpen: String?,
@@ -275,12 +286,20 @@ private fun Masthead(
         }
     }
     Rule()
-    Text(
-        when (section) { HomeSection.Week -> "Hafta"; HomeSection.Pinned -> "Sabit"; HomeSection.Notes -> "Notlar" }, fontFamily = Serif, fontWeight = FontWeight.Bold,
-        fontSize = if (landscape) 100.sp else 116.sp,
-        letterSpacing = (-3).sp, textAlign = if (landscape) TextAlign.Start else TextAlign.Center,
-        color = Ink, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-    )
+    if (section == HomeSection.Week) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Weekly Planner", fontFamily = Serif, fontWeight = FontWeight.Bold, fontSize = if (landscape) 76.sp else 68.sp,
+                letterSpacing = (-2).sp, color = Ink, maxLines = 1, modifier = Modifier.weight(1f))
+            WeekSummary(state.week)
+        }
+    } else {
+        Text(
+            if (section == HomeSection.Pinned) "Sabit" else "Notlar", fontFamily = Serif, fontWeight = FontWeight.Bold,
+            fontSize = if (landscape) 100.sp else 116.sp,
+            letterSpacing = (-3).sp, textAlign = if (landscape) TextAlign.Start else TextAlign.Center,
+            color = Ink, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+        )
+    }
     Rule(5.dp); Spacer(Modifier.height(5.dp)); Rule()
     MainNav(section, a)
     if (section == HomeSection.Notes) {
@@ -356,7 +375,12 @@ private fun PinnedPage(state: HomeUiState, a: HomeActions) {
             Column(Modifier.weight(1f)) {
                 Text(p.title.ifBlank { "İsimsiz Not" }, fontFamily = Serif, fontWeight = FontWeight.Bold, fontSize = 38.sp,
                     letterSpacing = (-0.5).sp, color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Caps(RelativeTime.format(p.createdAt), 14, Grey1, modifier = Modifier.padding(top = 8.dp, bottom = 12.dp))
+                Caps(RelativeTime.format(p.createdAt), 14, Grey1, modifier = Modifier.padding(top = 8.dp))
+                state.excerpts[p.id]?.let {
+                    Text(it, fontFamily = Serif, fontStyle = FontStyle.Italic, fontSize = 22.sp, lineHeight = 29.sp,
+                        color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+                }
+                Spacer(Modifier.height(12.dp))
                 NoteActions(p, state, a)
             }
             Caps("Kaldır", 14, Grey1, modifier = Modifier.tap { a.unpin(p.id) }.padding(14.dp))
@@ -468,6 +492,12 @@ private fun Lead(page: Page, state: HomeUiState, selected: String?, landscape: B
                 letterSpacing = (-1.5).sp, color = Ink, maxLines = 3, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 14.dp, bottom = 14.dp)
             )
+            val excerpt = state.excerpts[page.id]
+            if (!excerpt.isNullOrBlank()) {
+                Text(excerpt, fontFamily = Serif, fontStyle = FontStyle.Italic, fontSize = 26.sp, lineHeight = 35.sp,
+                    color = Ink, maxLines = if (landscape) 6 else 7, overflow = TextOverflow.Ellipsis)
+            }
+            Text("1 sayfa", fontFamily = Sans, fontSize = 16.sp, color = Grey1, modifier = Modifier.padding(top = 18.dp, bottom = 14.dp))
             NoteActions(page, state, a)
         }
     }
@@ -488,7 +518,12 @@ private fun Story(page: Page, state: HomeUiState, a: HomeActions, landscape: Boo
                     page.title.ifBlank { "İsimsiz Not" }, fontFamily = Serif, fontWeight = FontWeight.Bold, fontSize = 30.sp,
                     lineHeight = 33.sp, letterSpacing = (-0.5).sp, color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis
                 )
-                Caps(RelativeTime.format(page.createdAt), 13, Grey1, modifier = Modifier.padding(top = 6.dp, bottom = 12.dp))
+                Caps(RelativeTime.format(page.createdAt), 13, Grey1, modifier = Modifier.padding(top = 6.dp, bottom = 8.dp))
+                state.excerpts[page.id]?.let {
+                    Text(it, fontFamily = Serif, fontStyle = FontStyle.Italic, fontSize = 20.sp, lineHeight = 27.sp,
+                        color = Ink, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                }
+                Spacer(Modifier.height(12.dp))
                 NoteActions(page, state, a)
             }
         }
@@ -552,17 +587,17 @@ private fun NewNoteButton(a: HomeActions, modifier: Modifier = Modifier) {
 @Composable
 private fun IconButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, on: Boolean = false, onClick: () -> Unit) {
     Box(
-        Modifier.size(40.dp).border(1.5.dp, Ink).background(if (on) Ink else Color.Transparent).tap(onClick),
+        Modifier.size(34.dp).clip(Pill).border(1.5.dp, Ink, Pill).background(if (on) Ink else Color.Transparent).tap(onClick),
         contentAlignment = Alignment.Center
-    ) { Icon(icon, contentDescription = label, tint = if (on) Color.White else Ink, modifier = Modifier.size(22.dp)) }
+    ) { Icon(icon, contentDescription = label, tint = if (on) Color.White else Ink, modifier = Modifier.size(18.dp)) }
 }
 
 @Composable
 private fun ActionChip(label: String, on: Boolean = false, onClick: () -> Unit) {
     Box(
-        Modifier.height(40.dp).border(1.5.dp, Ink).background(if (on) Ink else Color.Transparent).tap(onClick).padding(horizontal = 12.dp),
+        Modifier.height(34.dp).clip(Pill).border(1.5.dp, Ink, Pill).background(if (on) Ink else Color.Transparent).tap(onClick).padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center
-    ) { Caps(label, 12, if (on) Color.White else Ink, FontWeight.Bold) }
+    ) { Caps(label, 11, if (on) Color.White else Ink, FontWeight.Bold) }
 }
 
 /** Under a note: trash, "select tag", "add tag", the tags it has, and the tag picker or delete confirmation. */
@@ -575,7 +610,7 @@ private fun NoteActions(page: Page, state: HomeUiState, a: HomeActions) {
     Column(Modifier.fillMaxWidth()) {
         if (a.confirmDelete == page.id) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.height(40.dp), contentAlignment = Alignment.CenterStart) { Caps("Not silinsin mi?", 14, Ink, FontWeight.Bold) }
+                Box(Modifier.height(34.dp), contentAlignment = Alignment.CenterStart) { Caps("Not silinsin mi?", 14, Ink, FontWeight.Bold) }
                 ActionChip("Sil", on = true) { a.deletePage(page.id) }
                 ActionChip("Vazgeç") { a.askDelete(null) }
             }
@@ -624,58 +659,50 @@ private fun TagAdd(page: Page, a: HomeActions) {
         BasicTextField(
             value = a.pickerInput, onValueChange = a.setPickerInput, singleLine = true,
             textStyle = TextStyle(fontFamily = Serif, fontSize = 22.sp, color = Ink), cursorBrush = SolidColor(Ink),
-            modifier = Modifier.weight(1f).height(44.dp).border(1.5.dp, Ink).padding(10.dp, 10.dp).focusRequester(focus),
+            modifier = Modifier.weight(1f).height(40.dp).clip(Pill).border(1.5.dp, Ink, Pill).padding(16.dp, 9.dp).focusRequester(focus),
             decorationBox = { inner ->
                 if (a.pickerInput.isEmpty()) Text("yeni etiket…", fontFamily = Serif, fontStyle = FontStyle.Italic, fontSize = 22.sp, color = Grey1)
                 inner()
             }
         )
         Spacer(Modifier.width(10.dp))
-        Box(Modifier.height(44.dp).background(Ink).tap { a.addPickerTag(page.id) }.padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.height(40.dp).clip(Pill).background(Ink).tap { a.addPickerTag(page.id) }.padding(horizontal = 22.dp), contentAlignment = Alignment.Center) {
             Caps("Ekle", 15, Color.White, FontWeight.Bold)
         }
     }
 }
 
-// ---------- week page: day columns with typed to-do lists ----------
+// ---------- Weekly Planner: one column per day, tap a day to open it ----------
 
-private val TodoMinHeight = 420.dp
-private val TodoMaxHeight = 760.dp
-
+/** Week number, year progress and date range: small, to the right of the title. */
 @Composable
-private fun WeekPage(state: HomeUiState, a: HomeActions, landscape: Boolean) {
-    val w = state.week
-    val monday = w.monday
+private fun WeekSummary(w: WeekUi) {
     val percent = PlannerWeeks.yearPercent(w.today)
-    Row(Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 14.dp), verticalAlignment = Alignment.Bottom) {
-        Column(Modifier.weight(1f)) {
-            Caps("${PlannerWeeks.rangeLabel(monday)} · ${monday.plusDays(3).year}", 14, Grey1, FontWeight.Bold)
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(PlannerWeeks.weekOfYear(monday), fontFamily = Serif, fontWeight = FontWeight.Bold, fontSize = 64.sp, letterSpacing = (-2).sp, color = Ink)
-                Caps("hafta", 15, Grey1, FontWeight.Bold, Modifier.padding(start = 10.dp, bottom = 12.dp))
-            }
-        }
-        Column(Modifier.width(if (landscape) 380.dp else 260.dp), horizontalAlignment = Alignment.End) {
-            Caps("Yıl %$percent tamamlandı", 14, Grey1, FontWeight.Bold, Modifier.padding(bottom = 8.dp))
-            Box(Modifier.fillMaxWidth().height(10.dp).border(1.dp, Ink)) {
-                Box(Modifier.fillMaxHeight().fillMaxWidth(percent / 100f).background(Ink))
-            }
+    Column(Modifier.width(230.dp), horizontalAlignment = Alignment.End) {
+        Caps("Hafta ${PlannerWeeks.weekOfYear(w.monday)}", 15, Ink, FontWeight.Bold)
+        Caps("${PlannerWeeks.rangeLabel(w.monday)} · ${w.monday.plusDays(3).year}", 11, Grey1, modifier = Modifier.padding(top = 2.dp))
+        Caps("Yıl %$percent tamamlandı", 11, Grey1, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+        Box(Modifier.fillMaxWidth().height(6.dp).border(1.dp, Ink)) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(percent / 100f).background(Ink))
         }
     }
-    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+}
+
+@Composable
+private fun WeekPage(state: HomeUiState, a: HomeActions, modifier: Modifier) {
+    val w = state.week
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
         WeekTool("‹ Önceki", false) { a.shiftWeek(-1) }
         Spacer(Modifier.width(20.dp))
         WeekTool("Bu hafta", w.isCurrentWeek) { a.shiftWeek(0) }
         Spacer(Modifier.width(20.dp))
         WeekTool("Sonraki ›", false) { a.shiftWeek(1) }
     }
-    // Every column has the same height: it grows with the longest list, up to a limit (then the lists scroll).
-    val longest = (0L..6L).maxOf { w.todos[monday.plusDays(it)].orEmpty().size }
-    val columnHeight = (110 + (longest + 1) * 54).dp.coerceIn(TodoMinHeight, TodoMaxHeight)
-    Row(Modifier.fillMaxWidth().padding(bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    // The columns reach the bottom of the screen.
+    Row(modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         for (i in 0L..6L) {
-            val day = monday.plusDays(i)
-            DayColumn(day, day == w.today, w.todos[day].orEmpty(), columnHeight, state.focusTodoId, a, Modifier.weight(if (day == w.today) 2.3f else 1f))
+            val day = w.monday.plusDays(i)
+            DayColumn(day, day == w.today, w.todos[day].orEmpty(), a, Modifier.weight(if (day == w.today) 2.3f else 1f).fillMaxHeight())
         }
     }
 }
@@ -683,7 +710,7 @@ private fun WeekPage(state: HomeUiState, a: HomeActions, landscape: Boolean) {
 /** A small text button: current choice underlined, no frame. */
 @Composable
 private fun WeekTool(label: String, on: Boolean, onClick: () -> Unit) {
-    Box(Modifier.tap(onClick).padding(horizontal = 6.dp, vertical = 10.dp)) {
+    Box(Modifier.tap(onClick).padding(horizontal = 6.dp, vertical = 8.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Caps(label, 15, Ink, if (on) FontWeight.Bold else FontWeight.Medium)
             Box(Modifier.padding(top = 4.dp).width(if (on) 40.dp else 0.dp).height(2.dp).background(Ink))
@@ -691,13 +718,14 @@ private fun WeekTool(label: String, on: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** One day as a tall column: date on top (black when it is today), its to-do items, a "+" to add one. */
+/** One day as a tall column of ruled lines: date on top (black when it is today), the items written so far. Tap opens the day. */
 @Composable
-private fun DayColumn(
-    day: LocalDate, today: Boolean, items: List<TodoItem>, height: Dp, focusId: String?, a: HomeActions, modifier: Modifier
-) {
+private fun DayColumn(day: LocalDate, today: Boolean, items: List<TodoItem>, a: HomeActions, modifier: Modifier) {
     val idx = day.dayOfWeek.value - 1
-    Column(modifier.height(height).border(if (today) 2.dp else 1.dp, if (today) Ink else Grey2)) {
+    Column(
+        modifier.border(if (today) 2.dp else 1.dp, if (today) Ink else Grey2).tap { a.openDay(day) }
+            .semantics { contentDescription = "Günü aç ${if (today) "bugün" else PlannerWeeks.DAY_NAMES[idx]}" }
+    ) {
         Column(
             Modifier.fillMaxWidth().background(if (today) Ink else Color(0xFFEAEAE6)).padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -707,53 +735,77 @@ private fun DayColumn(
             Text(day.dayOfMonth.toString(), fontFamily = Serif, fontWeight = FontWeight.Bold, fontSize = if (today) 44.sp else 32.sp, color = fg)
             if (today) Caps("Bugün · ${PlannerWeeks.monthName(day)}", 11, Color.White)
         }
-        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 4.dp)) {
-            items.forEach { item -> TodoRow(day, item, today, focusId == item.id, a) }
-            Box(
-                Modifier.fillMaxWidth().tap { a.addTodo(day) }.padding(vertical = 10.dp)
-                    .semantics { contentDescription = "Madde ekle ${if (today) "bugün" else PlannerWeeks.DAY_NAMES[idx]}" },
-                contentAlignment = Alignment.CenterStart
-            ) { Text("+ madde", fontFamily = Sans, fontSize = 14.sp, color = Grey1) }
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 6.dp)) {
+            items.forEach { item ->
+                Row(Modifier.fillMaxWidth().heightIn(min = if (today) 54.dp else 48.dp).padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
+                    Check(item.done, 20.dp) { a.toggleTodo(day, item.id) }
+                    Text(
+                        item.text, fontFamily = Serif, fontSize = if (today) 19.sp else 16.sp, lineHeight = if (today) 23.sp else 20.sp,
+                        color = if (item.done) Grey2 else Ink, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                        textDecoration = if (item.done) TextDecoration.LineThrough else null,
+                        modifier = Modifier.padding(start = 6.dp)
+                    )
+                }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFD0D0CC)))
+            }
         }
     }
 }
 
-/** Check box, editable text (saved as you type), a × while editing. An emptied item disappears when you leave it. */
 @Composable
-private fun TodoRow(day: LocalDate, item: TodoItem, today: Boolean, takeFocus: Boolean, a: HomeActions) {
-    val focus = remember { FocusRequester() }
-    var focused by remember { mutableStateOf(false) }
-    var hadFocus by remember { mutableStateOf(false) }
-    LaunchedEffect(takeFocus) {
-        if (takeFocus) { runCatching { focus.requestFocus() }; a.focusHandled() }
-    }
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
-        Box(
-            Modifier.padding(top = 3.dp, end = 6.dp).size(22.dp).border(1.5.dp, Ink).background(if (item.done) Ink else Color.Transparent)
-                .tap { a.toggleTodo(day, item.id) }.semantics { contentDescription = "Tamamlandı işaretle" },
-            contentAlignment = Alignment.Center
-        ) { if (item.done) Text("✓", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold) }
-        BasicTextField(
-            value = item.text, onValueChange = { a.editTodo(day, item.id, it) },
-            textStyle = TextStyle(
-                fontFamily = Serif, fontSize = if (today) 20.sp else 17.sp, lineHeight = if (today) 25.sp else 22.sp,
-                color = if (item.done) Grey2 else Ink,
-                textDecoration = if (item.done) androidx.compose.ui.text.style.TextDecoration.LineThrough else null
-            ),
-            cursorBrush = SolidColor(Ink),
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { a.addTodo(day) }),
-            modifier = Modifier.weight(1f).padding(top = 1.dp).focusRequester(focus).onFocusChanged {
-                if (focused && !it.isFocused && item.text.isBlank() && hadFocus) a.removeTodo(day, item.id)
-                focused = it.isFocused
-                if (it.isFocused) hadFocus = true
+private fun Check(done: Boolean, size: Dp, onClick: () -> Unit) {
+    Box(
+        Modifier.padding(top = 2.dp).size(size).border(1.5.dp, Ink).background(if (done) Ink else Color.Transparent)
+            .tap(onClick).semantics { contentDescription = "Tamamlandı işaretle" },
+        contentAlignment = Alignment.Center
+    ) { if (done) Text("✓", color = Color.White, fontSize = (size.value * 0.7f).sp, fontWeight = FontWeight.Bold) }
+}
+
+/** The opened day in front of the page: every line editable, saved as you type, a button for more lines, Back to return. */
+@Composable
+private fun DayDialog(day: LocalDate, items: List<TodoItem>, a: HomeActions, onClose: () -> Unit) {
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onClose,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Column(Modifier.fillMaxWidth(0.88f).fillMaxHeight(0.9f).background(Paper).border(2.dp, Ink).padding(28.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.clip(Pill).border(1.5.dp, Ink, Pill).tap(onClose).padding(horizontal = 18.dp, vertical = 9.dp)) {
+                    Caps("← Geri", 13, Ink, FontWeight.Bold)
+                }
+                Spacer(Modifier.width(22.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("${PlannerWeeks.DAY_FULL[day.dayOfWeek.value - 1]} ${day.dayOfMonth} ${PlannerWeeks.monthName(day)}",
+                        fontFamily = Serif, fontWeight = FontWeight.Bold, fontSize = 38.sp, letterSpacing = (-1).sp, color = Ink)
+                    Caps("Yazdıkların kendiliğinden kaydolur", 11, Grey1)
+                }
             }
-        )
-        if (focused) {
-            Box(
-                Modifier.size(28.dp).tap { a.removeTodo(day, item.id) }.semantics { contentDescription = "Maddeyi sil" },
-                contentAlignment = Alignment.Center
-            ) { Text("×", fontSize = 22.sp, color = Grey1) }
+            Spacer(Modifier.height(14.dp)); Rule(); 
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                items.forEachIndexed { i, item ->
+                    Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.Top) {
+                        Check(item.done, 30.dp) { a.toggleTodo(day, item.id) }
+                        Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                            BasicTextField(
+                                value = item.text, onValueChange = { a.editTodo(day, item.id, it) },
+                                textStyle = TextStyle(
+                                    fontFamily = Serif, fontSize = 26.sp, lineHeight = 32.sp, color = if (item.done) Grey2 else Ink,
+                                    textDecoration = if (item.done) TextDecoration.LineThrough else null
+                                ),
+                                cursorBrush = SolidColor(Ink),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp).semantics { contentDescription = "Madde ${i + 1}" }
+                            )
+                            Box(Modifier.fillMaxWidth().height(1.dp).background(Grey2))
+                        }
+                    }
+                }
+                Box(Modifier.padding(vertical = 22.dp).clip(Pill).border(1.5.dp, Ink, Pill).tap { a.addSlots(day) }.padding(horizontal = 24.dp, vertical = 11.dp)) {
+                    Caps("+ ${PlannerTodoRepository.SLOTS_PER_ADD} satır ekle", 13, Ink, FontWeight.Bold)
+                }
+            }
         }
     }
 }
