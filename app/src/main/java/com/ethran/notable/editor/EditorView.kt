@@ -36,6 +36,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.unit.dp
 import com.ethran.notable.editor.canvas.CanvasEventBus
 import androidx.compose.ui.Alignment
@@ -280,6 +282,32 @@ fun EditorView(
                             onDiscard = { navController.popBackStack() }
                         )
                     }
+                    if (plannerMonday != null || plannerDay != null) {
+                        fun toHome(section: com.ethran.notable.ui.viewmodels.HomeSection) {
+                            com.ethran.notable.ui.viewmodels.HomeSectionMemory.last = section
+                            navController.navigate(com.ethran.notable.ui.views.HomeDestination.route) {
+                                popUpTo(com.ethran.notable.ui.views.HomeDestination.route) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+                            val density = androidx.compose.ui.platform.LocalDensity.current
+                            with(density) {
+                                Box(
+                                    Modifier.offset(0.dp, com.ethran.notable.planner.PlannerLayout.HEADER_H.toDp())
+                                        .fillMaxWidth().height(com.ethran.notable.planner.PlannerLayout.NAV_H.toDp()),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    com.ethran.notable.ui.components.MainTabs(
+                                        active = com.ethran.notable.ui.components.MainTab.Week,
+                                        onWeek = { goToWeek(PlannerWeeks.mondayOf(plannerDay ?: LocalDate.now())) },
+                                        onNotes = { toHome(com.ethran.notable.ui.viewmodels.HomeSection.Notes) },
+                                        onPinned = { toHome(com.ethran.notable.ui.viewmodels.HomeSection.Pinned) }
+                                    )
+                                }
+                            }
+                        }
+                    }
                     plannerMonday?.let { monday ->
                         // The date number of each row is a tap zone: it opens that day's page.
                         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -305,12 +333,6 @@ fun EditorView(
                             onPrevious = { goToWeek(monday.minusWeeks(1)) },
                             onThisWeek = { goToWeek(PlannerWeeks.mondayOf(LocalDate.now())) },
                             onNext = { goToWeek(monday.plusWeeks(1)) },
-                            onNotes = {
-                                navController.navigate(com.ethran.notable.ui.views.HomeDestination.route) {
-                                    popUpTo(com.ethran.notable.ui.views.HomeDestination.route) { inclusive = true }
-                                    launchSingleTop = true
-                                }
-                            },
                             modifier = Modifier.align(Alignment.TopCenter)
                         )
                     }
@@ -319,12 +341,6 @@ fun EditorView(
                             onWeek = { goToWeek(PlannerWeeks.mondayOf(day)) },
                             onPrevious = { goToDay(day.minusDays(1)) },
                             onNext = { goToDay(day.plusDays(1)) },
-                            onNotes = {
-                                navController.navigate(com.ethran.notable.ui.views.HomeDestination.route) {
-                                    popUpTo(com.ethran.notable.ui.views.HomeDestination.route) { inclusive = true }
-                                    launchSingleTop = true
-                                }
-                            },
                             modifier = Modifier.align(Alignment.TopCenter)
                         )
                     }

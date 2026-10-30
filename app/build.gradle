@@ -84,7 +84,7 @@ android {
         debug {
             if (sideBySide) {
                 applicationIdSuffix ".debug"
-                manifestPlaceholders = [appLabel: "A Deus Note TEST"]   // so the test copy is not mistaken for the real app
+                manifestPlaceholders = [appLabel: "A Deus Notebook TEST"]   // so the test copy is not mistaken for the real app
             }
             buildConfigField("boolean", "SIDE_BY_SIDE", sideBySide.toString())
             minifyEnabled false

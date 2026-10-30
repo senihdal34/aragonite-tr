@@ -30,8 +30,8 @@ private val inkThin = paint(Color.BLACK, 2f)
 private val guide = paint(Color.GRAY, 1.5f)
 private val box = paint(Color.BLACK, 3f, Paint.Style.STROKE)
 private val fillInk = paint(Color.BLACK)
-private val titleP = paint(Color.BLACK, size = 44f, face = serifBold)
-private val summary = paint(Color.DKGRAY, size = 26f, face = sansBold).apply { textAlign = Paint.Align.RIGHT; letterSpacing = 0.08f }
+private val titleP = paint(Color.BLACK, size = 67f, face = serifBold).apply { letterSpacing = -0.03f }
+private val summary = paint(Color.DKGRAY, size = 23f, face = sansBold).apply { textAlign = Paint.Align.RIGHT; letterSpacing = 0.14f }
 private val summaryBold = paint(Color.BLACK, size = 30f, face = sansBold).apply { textAlign = Paint.Align.RIGHT; letterSpacing = 0.1f }
 private val subP = paint(Color.DKGRAY, size = 34f, face = sansBold).apply { textAlign = Paint.Align.RIGHT; letterSpacing = 0.08f }
 private val dayName = paint(Color.BLACK, size = 30f, face = sansBold).apply { textAlign = Paint.Align.CENTER; letterSpacing = 0.12f }
@@ -44,26 +44,29 @@ private fun checkbox(canvas: Canvas, x: Float, bottom: Float, size: Float = 34f)
     canvas.drawRect(x, bottom - size, x + size, bottom, box)
 }
 
-// Logo in the header, loaded once.
+// Logo in the header, loaded once. Sizes match the Home header (logo 52 dp, title 36 sp, small block on the right)
+// so moving between Home and the planner feels like one page.
 private var logoBitmap: android.graphics.Bitmap? = null
 private fun logo(context: android.content.Context): android.graphics.Bitmap? {
     logoBitmap?.let { return it }
     return runCatching {
         val src = android.graphics.BitmapFactory.decodeResource(context.resources, com.ethran.notable.R.drawable.logo_deusnote)
-        android.graphics.Bitmap.createScaledBitmap(src, 96, 96, true)
+        android.graphics.Bitmap.createScaledBitmap(src, 98, 98, true)
     }.getOrNull().also { logoBitmap = it }
 }
 
 private fun drawHeader(context: android.content.Context, canvas: Canvas, w: Float, oy: Float, title: String, line1: String, line2: String, percent: Int) {
-    logo(context)?.let { canvas.drawBitmap(it, 60f, 26f + oy, null) }
-    canvas.drawText(title, 180f, 90f + oy, titleP)
-    canvas.drawText(line1, w - 60f, 50f + oy, summaryBold)
-    canvas.drawText(line2, w - 60f, 84f + oy, summary)
-    canvas.drawText("YIL %$percent TAMAMLANDI", w - 60f, 118f + oy, summary)
-    val barW = 300f
-    canvas.drawRect(w - 60f - barW, 128f + oy, w - 60f, 138f + oy, box)
-    canvas.drawRect(w - 60f - barW, 128f + oy, w - 60f - barW + barW * percent / 100f, 138f + oy, fillInk)
+    logo(context)?.let { canvas.drawBitmap(it, 0f, 26f + oy, null) }
+    canvas.drawText(title, 132f, 97f + oy, titleP)
+    val right = w - PlannerLayout.RIGHT_MARGIN
+    canvas.drawText(line1, right, 48f + oy, summary)
+    canvas.drawText(line2, right, 80f + oy, summary)
+    canvas.drawText("YIL %$percent TAMAMLANDI", right, 112f + oy, summary)
+    val barW = 280f
+    canvas.drawRect(right - barW, 122f + oy, right, 132f + oy, box)
+    canvas.drawRect(right - barW, 122f + oy, right - barW + barW * percent / 100f, 132f + oy, fillInk)
     canvas.drawRect(0f, PlannerLayout.HEADER_H - 8f + oy, w, PlannerLayout.HEADER_H + oy, fillInk)
+    canvas.drawRect(0f, PlannerLayout.ROWS_TOP - 3f + oy, w, PlannerLayout.ROWS_TOP + oy, fillInk)   // under the tab bar
 }
 
 /**
@@ -101,7 +104,7 @@ fun drawPlannerWeekBg(
             if (k < layout.lines) canvas.drawLine(labelW + 28f, ly, w - 40f, ly, guide)
         }
     }
-    canvas.drawLine(labelW, PlannerLayout.HEADER_H, labelW, PlannerLayout.HEADER_H + 7 * rowH, ink)
+    canvas.drawLine(labelW, PlannerLayout.ROWS_TOP, labelW, PlannerLayout.ROWS_TOP + 7 * rowH, ink)
 }
 
 /** A day opened from the week page: a long check-box list that fills the screen (no scrolling). */
@@ -118,13 +121,13 @@ fun drawPlannerDayBg(
         PlannerWeeks.yearPercent(today)
     )
     val lines = PlannerLayout.dayLines(h)
-    val step = (h - PlannerLayout.HEADER_H - PlannerLayout.BOTTOM_MARGIN) / lines
+    val step = (h - PlannerLayout.ROWS_TOP - PlannerLayout.BOTTOM_MARGIN) / lines
     for (k in 1..lines) {
-        val ly = PlannerLayout.HEADER_H + k * step
+        val ly = PlannerLayout.ROWS_TOP + k * step
         checkbox(canvas, 70f, ly - step * 0.2f, step * 0.42f)
         canvas.drawLine(170f, ly, w - 40f, ly, guide)
     }
-    canvas.drawLine(150f, PlannerLayout.HEADER_H, 150f, PlannerLayout.HEADER_H + lines * step, ink)
+    canvas.drawLine(150f, PlannerLayout.ROWS_TOP, 150f, PlannerLayout.ROWS_TOP + lines * step, ink)
 }
 
 /** Second page of the week: a long check-box list and a ruled notes area (like the paper planner). */

@@ -27,7 +27,7 @@ import javax.inject.Inject
 enum class HomeSection { Notes, Pinned }
 
 /** Remembers the open Home tab while the app process lives (Home is rebuilt when coming back from a note). */
-private object HomeSectionMemory { var last: HomeSection? = null }
+object HomeSectionMemory { var last: HomeSection? = null }
 
 data class TopicGroup(
     val tag: String,

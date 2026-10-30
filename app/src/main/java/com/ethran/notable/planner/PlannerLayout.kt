@@ -9,6 +9,11 @@ import kotlin.math.max
  */
 object PlannerLayout {
     const val HEADER_H = 150f
+    /** Strip under the header for the shared HAFTA | NOTLAR | SABİT bar (drawn by the editor, not by the background). */
+    const val NAV_H = 153f   // same height as the tab bar and its padding on Home, so both pages line up
+    /** Home's side padding in page pixels; the header block on the right ends here. */
+    const val RIGHT_MARGIN = 105f
+    const val ROWS_TOP = HEADER_H + NAV_H
     const val LABEL_W = 200f
     const val BOTTOM_MARGIN = 40f
     const val MIN_LINES = 5
@@ -17,17 +22,17 @@ object PlannerLayout {
 
     data class Week(val rowH: Float, val lines: Int) {
         val step get() = rowH / lines
-        fun rowTop(i: Int) = HEADER_H + i * rowH
+        fun rowTop(i: Int) = ROWS_TOP + i * rowH
     }
 
     /** Seven equal rows between the header and the bottom margin, at least [MIN_LINES] lines each. */
     fun week(pageHeight: Float): Week {
-        val rowH = (pageHeight - HEADER_H - BOTTOM_MARGIN) / 7f
+        val rowH = (pageHeight - ROWS_TOP - BOTTOM_MARGIN) / 7f
         return Week(rowH, max(MIN_LINES, floor(rowH / MIN_STEP).toInt()))
     }
 
     /** Number of to-do lines on a day page. */
-    fun dayLines(pageHeight: Float): Int = max(8, floor((pageHeight - HEADER_H - BOTTOM_MARGIN) / DAY_STEP).toInt())
+    fun dayLines(pageHeight: Float): Int = max(8, floor((pageHeight - ROWS_TOP - BOTTOM_MARGIN) / DAY_STEP).toInt())
 
     /** Vertical band of a row that holds the date number (the only part that opens the day). */
     fun numberTop(week: Week, i: Int) = week.rowTop(i) + week.rowH * 0.32f

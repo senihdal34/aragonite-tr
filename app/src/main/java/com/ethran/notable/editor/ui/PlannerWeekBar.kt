@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 private val Pill = RoundedCornerShape(50)
 
 /**
- * Week tool on a planner page: previous week, this week, next week, and a way to the notes list. It sits in the free middle of the page's
+ * Week tool on a planner page: previous week, this week, next week, and and the shared tab bar sits under it. It sits in the free middle of the page's
  * header band, so it does not cover anything you write.
  */
 @Composable
@@ -34,7 +34,6 @@ fun PlannerWeekBar(
     onPrevious: () -> Unit,
     onThisWeek: () -> Unit,
     onNext: () -> Unit,
-    onNotes: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(modifier.padding(top = 36.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -46,8 +45,6 @@ fun PlannerWeekBar(
         BarButton("Bu hafta", isCurrentWeek, onThisWeek)
         BarButton("Sonraki ›", false, onNext)
     }
-    // Back to the notes list on Home.
-    Box(Modifier.clip(Pill).background(Color.White).border(BorderStroke(1.5.dp, Color.Black), Pill)) { BarButton("Notlar ›", false, onNotes) }
     }
 }
 
@@ -69,7 +66,6 @@ fun PlannerDayBar(
     onWeek: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-    onNotes: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(modifier.padding(top = 36.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -81,6 +77,5 @@ fun PlannerDayBar(
             BarButton("Hafta", true, onWeek)
             BarButton("Sonraki gün ›", false, onNext)
         }
-        Box(Modifier.clip(Pill).background(Color.White).border(BorderStroke(1.5.dp, Color.Black), Pill)) { BarButton("Notlar ›", false, onNotes) }
     }
 }

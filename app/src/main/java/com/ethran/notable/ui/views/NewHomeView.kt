@@ -85,6 +85,8 @@ import com.ethran.notable.ui.viewmodels.HomeSection
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import com.ethran.notable.navigation.NavigationDestination
+import com.ethran.notable.ui.components.MainTab
+import com.ethran.notable.ui.components.MainTabs
 import com.ethran.notable.ui.components.PagePreview
 import com.ethran.notable.ui.viewmodels.HomeUiState
 import com.ethran.notable.ui.viewmodels.HomeViewModel
@@ -188,7 +190,7 @@ fun HomeView(
         val scroll = rememberScrollState()
         Column(
             Modifier.fillMaxSize().verticalScroll(scroll)
-                .padding(horizontal = if (landscape) 50.dp else 56.dp, vertical = if (landscape) 34.dp else 44.dp)
+                .padding(horizontal = 56.dp, vertical = 14.dp)
         ) {
             Masthead(state, selected, section, landscape, actions, adding, input)
             if (section == HomeSection.Pinned) {
@@ -274,13 +276,13 @@ private fun Masthead(
         )
         Spacer(Modifier.width(18.dp))
         Text(
-            if (section == HomeSection.Pinned) "Pinned Notes" else "Personal Notes", fontFamily = Serif, fontWeight = FontWeight.Bold,
-            fontSize = if (landscape) 40.sp else 36.sp, letterSpacing = (-1).sp, color = Ink, maxLines = 1, modifier = Modifier.weight(1f)
+            if (section == HomeSection.Pinned) "Favorite Notes" else "Personal Notes", fontFamily = Serif, fontWeight = FontWeight.Bold,
+            fontSize = 36.sp, letterSpacing = (-1).sp, color = Ink, maxLines = 1, modifier = Modifier.weight(1f)
         )
         Column(horizontalAlignment = Alignment.End) {
-            Caps(date, 12, Grey1, FontWeight.SemiBold)
-            Caps("$total not · ${state.pinnedPages.size} sabit", 12, Grey1, modifier = Modifier.padding(top = 2.dp))
-            Caps("Ayarlar", 13, Ink, FontWeight.Bold, Modifier.tap(a.settings).padding(top = 4.dp, bottom = 4.dp, start = 12.dp))
+            Caps(date, 12, Grey1, FontWeight.Bold)
+            Caps("$total not · ${state.pinnedPages.size} favori", 12, Grey1, FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+            Caps("Ayarlar", 12, Ink, FontWeight.Bold, Modifier.tap(a.settings).padding(top = 2.dp, start = 12.dp))
         }
     }
     Rule(5.dp)
@@ -295,12 +297,11 @@ private fun Masthead(
 /** HAFTA opens the weekly planner page; NOTLAR and SABİT switch the list below. */
 @Composable
 private fun MainNav(section: HomeSection, a: HomeActions) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically) {
-        NavItem("Hafta", false, last = false, big = true) { a.planner() }
-        NavItem("Notlar", section == HomeSection.Notes, last = false, big = true) { a.section(HomeSection.Notes) }
-        NavItem("★ Sabit", section == HomeSection.Pinned, last = true, big = true) { a.section(HomeSection.Pinned) }
-    }
+    MainTabs(
+        active = if (section == HomeSection.Pinned) MainTab.Pinned else MainTab.Notes,
+        onWeek = a.planner, onNotes = { a.section(HomeSection.Notes) }, onPinned = { a.section(HomeSection.Pinned) },
+        modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp)
+    )
     Rule()
 }
 
@@ -381,14 +382,20 @@ private fun SectionNav(state: HomeUiState, selected: String?, a: HomeActions) {
         NavItem("Tümü", selected == null, last = false) { a.select(null) }
         state.topicGroups.forEach { g -> NavItem(g.tag, selected == g.tag, last = false) { a.select(g.tag) } }
         NavItem("+", false, last = true) { a.toggleAdd() }
-        if (selected != null) {
-            Spacer(Modifier.width(20.dp))
+    }
+    if (selected != null) {
+        // Deleting the selected topic: a line of its own, so it is easy to find.
+        Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            Text("#$selected", fontFamily = Serif, fontSize = 22.sp, color = Ink)
+            Spacer(Modifier.width(18.dp))
             if (a.deletingTopic == selected) {
-                Caps("Konu silinsin mi?", 13, Ink, FontWeight.Bold)
-                Caps("Sil", 14, Ink, FontWeight.Bold, Modifier.tap { a.removeTopic(selected) }.padding(12.dp))
-                Caps("Vazgeç", 14, Grey1, modifier = Modifier.tap { a.askDeleteTopic(null) }.padding(12.dp))
+                Caps("Konu silinsin mi?", 12, Ink, FontWeight.Bold)
+                Spacer(Modifier.width(10.dp))
+                ActionChip("Sil", on = true) { a.removeTopic(selected) }
+                Spacer(Modifier.width(8.dp))
+                ActionChip("Vazgeç") { a.askDeleteTopic(null) }
             } else {
-                Caps("Konuyu sil", 13, Grey1, modifier = Modifier.tap { a.askDeleteTopic(selected) }.padding(10.dp))
+                ActionChip("Konuyu sil") { a.askDeleteTopic(selected) }
             }
         }
     }

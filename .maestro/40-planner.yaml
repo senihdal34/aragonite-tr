@@ -1,7 +1,7 @@
 appId: io.aragonite.notes.debug
 ---
-# The app opens on the handwritten weekly planner page; the week tool moves between weeks, "Notlar" in its header leads
-# to Home. NOTLAR shows the note cards with delete and tag buttons; a topic can be deleted.
+# The app opens on the handwritten weekly planner page; the week tool moves between weeks, the NOTES tab leads
+# to Home. NOTES shows the note cards with delete and tag buttons; a topic can be deleted.
 - launchApp
 # start page: this week's handwritten page with the week tool in its header band
 - extendedWaitUntil:
@@ -11,11 +11,11 @@ appId: io.aragonite.notes.debug
 - tapOn: "‹ ÖNCEKİ"
 - tapOn: "‹ ÖNCEKİ"
 - tapOn: "BU HAFTA"
-- tapOn: "NOTLAR ›"
+- tapOn: "NOTES"
 - extendedWaitUntil:
-    visible: "NOTLAR"
+    visible: "NOTES"
     timeout: 20000
-- tapOn: "NOTLAR"
+- tapOn: "NOTES"
 - extendedWaitUntil:
     visible: "# SEÇ"
     timeout: 20000

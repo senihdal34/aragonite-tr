@@ -10,6 +10,7 @@ class PlannerLayoutTest {
         val w = PlannerLayout.week(2480f)
         assertTrue(w.lines >= 5)
         assertEquals(2480f - PlannerLayout.BOTTOM_MARGIN, w.rowTop(7), 0.5f)
+        assertEquals(PlannerLayout.HEADER_H + PlannerLayout.NAV_H, w.rowTop(0), 0.01f)   // rows start under the tab bar
     }
 
     @Test fun `landscape keeps five lines`() {
