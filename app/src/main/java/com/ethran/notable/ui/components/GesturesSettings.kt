@@ -38,6 +38,12 @@ fun GesturesSettings(
             onToggle = { isChecked ->
                 onSettingsChange(settings.copy(enableQuickNav = isChecked))
             })
+        SettingToggleRow(
+            label = stringResource(R.string.palm_guard), value = settings.palmGuard,
+            onToggle = { isChecked -> onSettingsChange(settings.copy(palmGuard = isChecked)) })
+        SettingToggleRow(
+            label = stringResource(R.string.pen_button_toggle), value = settings.penButtonToggle,
+            onToggle = { isChecked -> onSettingsChange(settings.copy(penButtonToggle = isChecked)) })
     }
 }
 

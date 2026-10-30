@@ -71,6 +71,15 @@ fun EditorGestureReceiver(
                         val gestureState = GestureState(scope = coroutineScope)
                         var overdueScroll = Offset.Zero
 
+                        // A resting palm (pen active, or low on the screen) must not undo, swipe or switch tools
+                        if (PalmGuard.shouldIgnoreTouch(
+                                GlobalAppSettings.current.palmGuard, down.position.y, size.height.toFloat(), density
+                            )
+                        ) {
+                            log.i("Palm guard: ignoring touch at y=${down.position.y}")
+                            return@awaitEachGesture
+                        }
+
                         // Ignore non-touch input
                         if (down.type != PointerType.Touch) {
                             log.i("Ignoring non-touch input")

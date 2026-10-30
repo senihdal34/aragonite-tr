@@ -28,8 +28,12 @@ fun Modifier.quickNavGesture(
                     return@awaitPointerEventScope
                 }
 
-                // Only react to finger input; ignore stylus or other pointer types.
-                if (firstDown.type != PointerType.Touch) {
+                // Only react to finger input; ignore stylus or other pointer types. A palm resting while
+                // writing (pen active, or low on the screen) must not open QuickNav either.
+                val palm = PalmGuard.shouldIgnoreTouch(
+                    GlobalAppSettings.current.palmGuard, firstDown.position.y, size.height.toFloat(), density
+                )
+                if (firstDown.type != PointerType.Touch || palm) {
                     // Drain without consuming until all pointers are up; then restart listening.
                     do {
                         val e = awaitPointerEvent(PointerEventPass.Main)
@@ -48,7 +52,12 @@ fun Modifier.quickNavGesture(
                         event.changes.filter { it.type == PointerType.Touch && it.pressed }
 
                     // Recognize three-finger touch once; consume only upon recognition
-                    if (!opened && touches.size >= 3) {
+                    val palmTouch = touches.any {
+                        PalmGuard.shouldIgnoreTouch(
+                            GlobalAppSettings.current.palmGuard, it.position.y, size.height.toFloat(), density
+                        )
+                    }
+                    if (!opened && touches.size >= 3 && !palmTouch) {
                         opened = true
                         touches.take(3).forEach { it.consume() }
                         onOpen()

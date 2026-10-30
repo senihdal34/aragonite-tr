@@ -45,10 +45,42 @@ class DrawCanvas(
 ) : SurfaceView(context) {
     private val log = ShipBook.getLogger("DrawCanvas")
 
+    private val penButton = com.ethran.notable.gestures.PenButtonEdge()
+
+    /** Pen in range (hover) or touching: remember it for the palm guard and watch the side button. */
+    private fun onPenSeen(event: MotionEvent) {
+        com.ethran.notable.gestures.PalmGuard.penSeen()
+        if (event.buttonState != 0) log.d("PENBTN buttonState=${event.buttonState} action=${event.actionMasked}")
+        if (com.ethran.notable.data.datastore.GlobalAppSettings.current.penButtonToggle && penButton.pressed(event.buttonState, event.eventTime)) {
+            post {
+                state.mode = if (state.mode == com.ethran.notable.editor.state.Mode.Draw)
+                    com.ethran.notable.editor.state.Mode.Erase else com.ethran.notable.editor.state.Mode.Draw
+                log.i("PENBTN toggled to ${state.mode}")
+                com.ethran.notable.ui.showHint(
+                    if (state.mode == com.ethran.notable.editor.state.Mode.Erase) "Silgi" else "Kalem", coroutineScope, 900
+                )
+            }
+        }
+    }
+
+    private fun isPen(event: MotionEvent) =
+        event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS || event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
+
+    override fun onHoverEvent(event: MotionEvent): Boolean {
+        if (isPen(event)) onPenSeen(event)
+        return super.onHoverEvent(event)
+    }
+
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        if (isPen(event)) onPenSeen(event)
+        return super.onGenericMotionEvent(event)
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean { //Custom view DrawCanvas overrides onTouchEvent but not performClick
         if (event.action == MotionEvent.ACTION_UP) {
             performClick()
         }
+        if (isPen(event)) com.ethran.notable.gestures.PalmGuard.penSeen()
         // We will only capture stylus events, and past rest down
 //        log.d("onTouchEvent, ${event.getToolType(0)}")
         if (event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS || event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER) {
