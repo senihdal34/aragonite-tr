@@ -56,6 +56,19 @@ class PlannerWeeksTest {
         assertNull(PlannerWeeks.sortKey("blank"))
     }
 
+    @Test fun `day pages follow their week page`() {
+        val monday = LocalDate.of(2026, 10, 26)
+        val order = listOf(
+            PlannerWeeks.weekBackground(monday.plusWeeks(1)), PlannerWeeks.dayBackground(monday.plusDays(2)),
+            PlannerWeeks.dayBackground(monday), PlannerWeeks.weekBackground(monday)
+        ).sortedBy { PlannerWeeks.sortKey(it) }
+        assertEquals(
+            listOf(PlannerWeeks.weekBackground(monday), PlannerWeeks.dayBackground(monday), PlannerWeeks.dayBackground(monday.plusDays(2)), PlannerWeeks.weekBackground(monday.plusWeeks(1))),
+            order
+        )
+        assertEquals(monday.plusDays(2), PlannerWeeks.parseDay("planner-day:2026-10-28"))
+    }
+
     @Test fun `iso week 53 in 2026`() =
         assertEquals(53, PlannerWeeks.weekNumber(LocalDate.of(2026, 12, 31)))
 }

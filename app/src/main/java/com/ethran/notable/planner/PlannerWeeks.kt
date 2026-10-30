@@ -7,6 +7,8 @@ import java.time.temporal.TemporalAdjusters
 
 /** Dates and labels of the weekly planner. Everything comes from the device clock, no network. */
 object PlannerWeeks {
+    /** One handwritten page per day, opened by tapping the day on the week page: a long to-do list. */
+    const val DAY_PREFIX = "planner-day:"
     /** One handwritten page per week: seven day rows with at least five to-do lines each. */
     const val WEEK_PREFIX = "planner-week:"
     /** To-do/notes page of the first version; no longer created, pages that have ink still draw. */
@@ -25,6 +27,7 @@ object PlannerWeeks {
     fun mondayOf(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 
     fun weekBackground(monday: LocalDate) = WEEK_PREFIX + monday
+    fun dayBackground(day: LocalDate) = DAY_PREFIX + day
 
     /** Mondays of the weeks that exist from the start: this week and the next [ahead] weeks. */
     fun weeksToEnsure(today: LocalDate, ahead: Int = WEEKS_AHEAD): List<LocalDate> {
@@ -32,13 +35,18 @@ object PlannerWeeks {
         return (0..ahead).map { first.plusWeeks(it.toLong()) }
     }
 
-    /** Sort key that keeps the planner notebook in date order. */
-    fun sortKey(background: String): Long? =
-        (parseWeek(background) ?: parseTodo(background))?.let { mondayOf(it).toEpochDay() }
+    /** Sort key that keeps the planner notebook in date order: a week page, then its seven day pages. */
+    fun sortKey(background: String): Long? {
+        parseWeek(background)?.let { return mondayOf(it).toEpochDay() * 10 }
+        parseDay(background)?.let { return mondayOf(it).toEpochDay() * 10 + 1 + (it.dayOfWeek.value - 1) }
+        parseTodo(background)?.let { return mondayOf(it).toEpochDay() * 10 + 9 }
+        return null
+    }
 
 
     fun parseTodo(background: String): LocalDate? = parse(background, TODO_PREFIX)
     fun parseWeek(background: String): LocalDate? = parse(background, WEEK_PREFIX)
+    fun parseDay(background: String): LocalDate? = parse(background, DAY_PREFIX)
     fun isPlanner(background: String) = background.startsWith("planner-")
 
     private fun parse(background: String, prefix: String): LocalDate? =

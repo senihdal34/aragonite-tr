@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">DeusNote</string>
+    <string name="app_name" translatable="false">A Deus Note</string>
     <string name="home_quick_pages">Quick pages</string>
     <string name="home_notebooks">Notebooks</string>
     <string name="home_add_new_folder">Add new folder</string>

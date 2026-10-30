@@ -2,6 +2,7 @@ package com.ethran.notable.editor
 
 
 import android.content.Context
+import com.ethran.notable.planner.PlannerWeeks
 import android.database.sqlite.SQLiteConstraintException
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -122,7 +123,8 @@ class PageView(
         }
 
     val isTransformationAllowed: Boolean
-        get() = when (pageFromDb?.backgroundType) {
+        get() = if (pageFromDb?.background?.let { it.startsWith(PlannerWeeks.WEEK_PREFIX) || it.startsWith(PlannerWeeks.DAY_PREFIX) } == true) false
+        else when (pageFromDb?.backgroundType) {
             "native", null -> true
             "coverImage" -> false
             else -> true

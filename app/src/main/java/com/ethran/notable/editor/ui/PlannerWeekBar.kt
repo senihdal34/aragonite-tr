@@ -37,7 +37,7 @@ fun PlannerWeekBar(
     onNotes: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.padding(top = 36.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
     Row(
         Modifier.clip(Pill).background(Color.White).border(BorderStroke(1.5.dp, Color.Black), Pill).padding(horizontal = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically
@@ -60,5 +60,27 @@ private fun BarButton(label: String, on: Boolean, onClick: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Text(label.uppercase(), fontFamily = FontFamily.SansSerif, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, color = if (on) Color.White else Color.Black)
+    }
+}
+
+/** Tool on a day page: back to the week, previous day, next day, notes. */
+@Composable
+fun PlannerDayBar(
+    onWeek: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onNotes: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier.padding(top = 36.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.clip(Pill).background(Color.White).border(BorderStroke(1.5.dp, Color.Black), Pill).padding(horizontal = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically
+        ) {
+            BarButton("‹ Önceki gün", false, onPrevious)
+            BarButton("Hafta", true, onWeek)
+            BarButton("Sonraki gün ›", false, onNext)
+        }
+        Box(Modifier.clip(Pill).background(Color.White).border(BorderStroke(1.5.dp, Color.Black), Pill)) { BarButton("Notlar ›", false, onNotes) }
     }
 }

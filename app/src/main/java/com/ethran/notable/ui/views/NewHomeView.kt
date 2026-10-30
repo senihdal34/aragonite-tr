@@ -265,26 +265,25 @@ private fun Masthead(
     a: HomeActions, adding: Boolean, input: String
 ) {
     val date = remember { SimpleDateFormat("EEEE, d MMMM yyyy", TR).format(Date()) }
-    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically) {
-        Caps(date, 14, Grey1, FontWeight.SemiBold)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val total = (state.recentPages + state.pinnedPages).distinctBy { it.id }.size
-            Caps("$total not · ${state.pinnedPages.size} sabit", 14)
-            Spacer(Modifier.width(22.dp))
-            Caps("Ayarlar", 15, Ink, FontWeight.Bold, Modifier.tap(a.settings).padding(vertical = 10.dp, horizontal = 4.dp))
+    val total = (state.recentPages + state.pinnedPages).distinctBy { it.id }.size
+    // Same header as the Weekly Planner page: logo and small title on the left, a small summary block on the right.
+    Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(com.ethran.notable.R.drawable.logo_deusnote),
+            contentDescription = "DeusNote", modifier = Modifier.size(52.dp)
+        )
+        Spacer(Modifier.width(18.dp))
+        Text(
+            if (section == HomeSection.Pinned) "Pinned Notes" else "Personal Notes", fontFamily = Serif, fontWeight = FontWeight.Bold,
+            fontSize = if (landscape) 40.sp else 36.sp, letterSpacing = (-1).sp, color = Ink, maxLines = 1, modifier = Modifier.weight(1f)
+        )
+        Column(horizontalAlignment = Alignment.End) {
+            Caps(date, 12, Grey1, FontWeight.SemiBold)
+            Caps("$total not · ${state.pinnedPages.size} sabit", 12, Grey1, modifier = Modifier.padding(top = 2.dp))
+            Caps("Ayarlar", 13, Ink, FontWeight.Bold, Modifier.tap(a.settings).padding(top = 4.dp, bottom = 4.dp, start = 12.dp))
         }
     }
-    Rule()
-    run {
-        Text(
-            if (section == HomeSection.Pinned) "Sabit" else "Notlar", fontFamily = Serif, fontWeight = FontWeight.Bold,
-            fontSize = if (landscape) 100.sp else 116.sp,
-            letterSpacing = (-3).sp, textAlign = if (landscape) TextAlign.Start else TextAlign.Center,
-            color = Ink, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-        )
-    }
-    Rule(5.dp); Spacer(Modifier.height(5.dp)); Rule()
+    Rule(5.dp)
     MainNav(section, a)
     if (section == HomeSection.Notes) {
         PinnedStrip(state, a)

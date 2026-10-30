@@ -35,7 +35,11 @@ class PlannerService @Inject constructor(private val appRepository: AppRepositor
     /** The page of the week starting on [monday], created when missing. */
     suspend fun ensureWeek(monday: LocalDate): Target = ensureWeeks(listOf(PlannerWeeks.mondayOf(monday))).getValue(PlannerWeeks.mondayOf(monday))
 
-    private suspend fun ensureWeeks(mondays: List<LocalDate>): Map<LocalDate, Target> = withContext(NonCancellable) {
+    /** The long to-do page of one day, created when missing (the week page exists too). */
+    suspend fun ensureDay(day: LocalDate): Target = ensureWeeks(listOf(PlannerWeeks.mondayOf(day)), listOf(day)).getValue(day)
+
+    /** Returns targets keyed by Monday for the weeks and by date for the extra [days]. */
+    private suspend fun ensureWeeks(mondays: List<LocalDate>, days: List<LocalDate> = emptyList()): Map<LocalDate, Target> = withContext(NonCancellable) {
         mutex.withLock {
             val books = appRepository.bookRepository
             val pages = appRepository.pageRepository
@@ -67,6 +71,15 @@ class PlannerService @Inject constructor(private val appRepository: AppRepositor
                     title = "Hafta ${PlannerWeeks.weekOfYear(monday)}"
                 ).also { pages.create(it); ids.add(it.id); byBackground[bg] = it; changed = true }
                 result[monday] = Target(book.id, page.id)
+            }
+            for (day in days) {
+                val bg = PlannerWeeks.dayBackground(day)
+                val page = byBackground[bg] ?: Page(
+                    notebookId = book.id, background = bg, backgroundType = "native",
+                    createdAt = Date.from(day.atStartOfDay(ZoneId.systemDefault()).toInstant()),
+                    title = "${PlannerWeeks.DAY_FULL[day.dayOfWeek.value - 1]} ${PlannerWeeks.shortDate(day)}"
+                ).also { pages.create(it); ids.add(it.id); byBackground[bg] = it; changed = true }
+                result[day] = Target(book.id, page.id)
             }
             if (changed) {
                 val background = byBackground.values.associate { it.id to it.background }

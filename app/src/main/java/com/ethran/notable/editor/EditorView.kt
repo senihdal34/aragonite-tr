@@ -31,6 +31,12 @@ import com.ethran.notable.editor.ui.SIDEBAR_WIDTH
 import com.ethran.notable.editor.ui.HorizontalScrollIndicator
 import com.ethran.notable.editor.ui.InboxToolbar
 import com.ethran.notable.editor.ui.PlannerWeekBar
+import com.ethran.notable.editor.ui.PlannerDayBar
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
 import com.ethran.notable.editor.canvas.CanvasEventBus
 import androidx.compose.ui.Alignment
 import com.ethran.notable.planner.PlannerService
@@ -159,6 +165,7 @@ fun EditorView(
         // Inbox mode detection — query DB since pageFromDb loads async
         var isInboxPage by remember { mutableStateOf(false) }
         var plannerMonday by remember(pageId) { mutableStateOf<LocalDate?>(null) }
+        var plannerDay by remember(pageId) { mutableStateOf<LocalDate?>(null) }
         val selectedTags = remember { mutableStateListOf<String>() }
         // Read tags reactively — updates when VaultTagScanner.refreshCache() runs
         val suggestedTags = VaultTagScanner.cachedTags
@@ -171,10 +178,17 @@ fun EditorView(
             isInboxPage = inbox
             editorState.isInboxPage = inbox
             plannerMonday = pageData?.background?.let(PlannerWeeks::parseWeek)
+            plannerDay = pageData?.background?.let(PlannerWeeks::parseDay)
         }
 
         // Week tool of the planner page: move to another week's page inside this notebook.
         val plannerService = remember { PlannerService(appRepository) }
+        fun goToDay(day: LocalDate) {
+            scope.launch {
+                val target = withContext(Dispatchers.IO) { runCatching { plannerService.ensureDay(day) }.getOrNull() }
+                if (target != null && target.pageId != pageId) CanvasEventBus.changePage.tryEmit(target.pageId)
+            }
+        }
         fun goToWeek(monday: LocalDate) {
             scope.launch {
                 val target = withContext(Dispatchers.IO) { runCatching { plannerService.ensureWeek(monday) }.getOrNull() }
@@ -267,11 +281,44 @@ fun EditorView(
                         )
                     }
                     plannerMonday?.let { monday ->
+                        // The date number of each row is a tap zone: it opens that day's page.
+                        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+                            val density = androidx.compose.ui.platform.LocalDensity.current
+                            val heightPx = constraints.maxHeight.toFloat()
+                            val layout = com.ethran.notable.planner.PlannerLayout.week(heightPx)
+                            with(density) {
+                                for (i in 0 until 7) {
+                                    Box(
+                                        Modifier
+                                            .offset(20f.toDp(), com.ethran.notable.planner.PlannerLayout.numberTop(layout, i).toDp())
+                                            .size((com.ethran.notable.planner.PlannerLayout.LABEL_W - 40f).toDp(), com.ethran.notable.planner.PlannerLayout.numberHeight(layout).toDp())
+                                            .clickable(
+                                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                                indication = null
+                                            ) { goToDay(monday.plusDays(i.toLong())) }
+                                    )
+                                }
+                            }
+                        }
                         PlannerWeekBar(
                             isCurrentWeek = monday == PlannerWeeks.mondayOf(LocalDate.now()),
                             onPrevious = { goToWeek(monday.minusWeeks(1)) },
                             onThisWeek = { goToWeek(PlannerWeeks.mondayOf(LocalDate.now())) },
                             onNext = { goToWeek(monday.plusWeeks(1)) },
+                            onNotes = {
+                                navController.navigate(com.ethran.notable.ui.views.HomeDestination.route) {
+                                    popUpTo(com.ethran.notable.ui.views.HomeDestination.route) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            },
+                            modifier = Modifier.align(Alignment.TopCenter)
+                        )
+                    }
+                    plannerDay?.let { day ->
+                        PlannerDayBar(
+                            onWeek = { goToWeek(PlannerWeeks.mondayOf(day)) },
+                            onPrevious = { goToDay(day.minusDays(1)) },
+                            onNext = { goToDay(day.plusDays(1)) },
                             onNotes = {
                                 navController.navigate(com.ethran.notable.ui.views.HomeDestination.route) {
                                     popUpTo(com.ethran.notable.ui.views.HomeDestination.route) { inclusive = true }
