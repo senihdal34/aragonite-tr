@@ -47,6 +47,12 @@ data class AppSettings(
     val twoFingerSwipeRightAction: GestureAction? = defaultTwoFingerSwipeRightAction,
     val holdAction: GestureAction? = defaultHoldAction,
     val enableQuickNav: Boolean = true,
+    /** Ignore finger gestures while the pen is active and in the bottom strip where the hand rests. */
+    val palmGuard: Boolean = true,
+    /** Clicking the pen's side button flips between pen and eraser. */
+    val penButtonToggle: Boolean = true,
+    /** Open the weekly planner (current week) when the app starts. */
+    val startInPlanner: Boolean = true,
 
 
     // Inbox Capture

@@ -5,11 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.ethran.notable.data.db.AnnotationRepository
 import com.ethran.notable.data.db.Page
 import com.ethran.notable.data.db.PageRepository
+import com.ethran.notable.data.db.PageTagRepository
+import com.ethran.notable.io.ExportedExcerpts
 import com.ethran.notable.data.db.TagPriority
 import com.ethran.notable.data.db.TagPriorityDao
 import com.ethran.notable.data.datastore.GlobalAppSettings
-import com.ethran.notable.io.ExportedExcerpts
 import com.ethran.notable.io.ThumbnailGenerator
+import com.ethran.notable.io.VaultTagScanner
+import com.ethran.notable.planner.PlannerService
+import java.io.File
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +23,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+
+enum class HomeSection { Notes, Pinned }
+
+/** Remembers the open Home tab while the app process lives (Home is rebuilt when coming back from a note). */
+object HomeSectionMemory { var last: HomeSection? = null }
 
 data class TopicGroup(
     val tag: String,
@@ -32,6 +41,8 @@ data class HomeUiState(
     val isLoading: Boolean = true,
     /** Bumped whenever a missing thumbnail has been created, so cards reload their image. */
     val thumbRevision: Int = 0,
+    /** Page id -> tags attached from Home (stored apart from the #tag boxes drawn in a note). */
+    val pageTags: Map<String, List<String>> = emptyMap(),
     /** Page id -> first lines of its exported note (only pages that have been exported). */
     val excerpts: Map<String, String> = emptyMap()
 )
@@ -41,11 +52,29 @@ class HomeViewModel @Inject constructor(
     private val pageRepository: PageRepository,
     private val annotationRepository: AnnotationRepository,
     private val tagPriorityDao: TagPriorityDao,
-    private val thumbnailGenerator: ThumbnailGenerator
+    private val thumbnailGenerator: ThumbnailGenerator,
+    private val plannerService: PlannerService,
+    private val pageTagRepository: PageTagRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private val _section = MutableStateFlow(
+        HomeSectionMemory.last ?: HomeSection.Notes
+    )
+    val section: StateFlow<HomeSection> = _section.asStateFlow()
+    fun selectSection(s: HomeSection) { HomeSectionMemory.last = s; _section.value = s }
+
+    /** Creates the planner pages for this and the coming weeks if needed, then hands back the current week. */
+    fun openPlanner(onReady: (bookId: String, pageId: String) -> Unit) {
+        viewModelScope.launch {
+            val target = try {
+                withContext(Dispatchers.IO) { plannerService.openCurrentWeek() }
+            } catch (e: Exception) { null }
+            if (target != null) onReady(target.bookId, target.pageId)
+        }
+    }
 
     /** Topic the Home list is filtered by; null shows the latest notes. */
     private val _selectedTopic = MutableStateFlow<String?>(null)
@@ -75,32 +104,35 @@ class HomeViewModel @Inject constructor(
                     // Combine annotation tags + manually added tags (TagPriority)
                     val annotTags = try { annotationRepository.getDistinctTags() } catch (e: Exception) { emptyList() }
                     val manualTags = try { tagPriorityDao.getAllSorted().map { it.tagName } } catch (e: Exception) { emptyList() }
-                    val allTags = (annotTags + manualTags).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+                    val pageTags = try { pageTagRepository.all() } catch (e: Exception) { emptyMap() }
+                    val vaultTags = try { VaultTagScanner.cachedTags } catch (e: Exception) { emptyList() }
+                    val hidden = try { pageTagRepository.hidden() } catch (e: Exception) { emptySet() }
+                    val allTags = (annotTags + manualTags + pageTags.values.flatten() + vaultTags)
+                        .map { it.trim() }.filter { it.isNotEmpty() && it !in hidden }.distinct()
                     val sortedTags = try { tagPriorityDao.getAllSorted().associate { it.tagName to it.sortOrder } } catch (e: Exception) { emptyMap() }
 
                     val groups = allTags.map { tag ->
-                        val pageIds = try { annotationRepository.getPageIdsByTag(tag) } catch (e: Exception) { emptyList() }
+                        val pageIds = (try { annotationRepository.getPageIdsByTag(tag) } catch (e: Exception) { emptyList() } +
+                            pageTags.filterValues { tag in it }.keys).distinct()
                         val pages = try { pageRepository.getByIds(pageIds) } catch (e: Exception) { emptyList() }
                         TopicGroup(tag = tag, pages = pages)
                     }.sortedBy { sortedTags[it.tag] ?: Int.MAX_VALUE }
 
                     val allPages = (pinned + recent + groups.flatMap { it.pages }).distinctBy { it.id }
                     val excerpts = try {
-                        ExportedExcerpts.load(ExportedExcerpts.inboxDir(GlobalAppSettings.current.obsidianInboxPath), allPages)
+                        ExportedExcerpts.load(ExportedExcerpts.inboxDir(GlobalAppSettings.current.obsidianInboxPath), (pinned + recent + groups.flatMap { it.pages }).distinctBy { it.id })
                     } catch (e: Exception) { emptyMap() }
                     if (_selectedTopic.value != null && groups.none { it.tag == _selectedTopic.value }) _selectedTopic.value = null
-                    _uiState.value = HomeUiState(
-                        pinnedPages = pinned,
-                        recentPages = recent,
-                        topicGroups = groups,
-                        isLoading = false,
-                        thumbRevision = _uiState.value.thumbRevision,
-                        excerpts = excerpts
-                    )
+                    _uiState.update {
+                        it.copy(
+                            pinnedPages = pinned, recentPages = recent, topicGroups = groups,
+                            isLoading = false, pageTags = pageTags, excerpts = excerpts
+                        )
+                    }
                     generateMissingThumbnails((pinned + recent + groups.flatMap { it.pages }).map { it.id }.distinct())
                 }
             } catch (e: Exception) {
-                _uiState.value = HomeUiState(isLoading = false)
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -122,6 +154,7 @@ class HomeViewModel @Inject constructor(
         if (tagName.isBlank()) return
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                pageTagRepository.unhide(tagName)
                 tagPriorityDao.upsert(TagPriority(tagName = tagName, sortOrder = 0))
                 _inputTag.value = ""
                 loadData()
@@ -129,10 +162,12 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /** Deletes a topic: off every note, out of the topic list. The notes stay. */
     fun removeTag(tagName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 tagPriorityDao.delete(tagName)
+                pageTagRepository.deleteTopic(tagName)
                 loadData()
             } catch (e: Exception) { /* ignore */ }
         }
@@ -149,6 +184,33 @@ class HomeViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
+            loadData()
+        }
+    }
+
+    // ---------- note actions: tags and delete ----------
+
+    /** Adds the tag to the note, or removes it when the note already has it. */
+    fun toggleTag(pageId: String, tag: String) {
+        val clean = PageTagRepository.normalize(tag)
+        if (clean.isEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            try { pageTagRepository.unhide(clean) } catch (e: Exception) { return@launch }
+            val current = try { pageTagRepository.get(pageId) } catch (e: Exception) { return@launch }
+            val next = if (clean in current) current - clean else current + clean
+            try { pageTagRepository.set(pageId, next) } catch (e: Exception) { return@launch }
+            loadData()
+        }
+    }
+
+    /** Deletes the note with its strokes, tags and cached thumbnail. The exported Markdown file is not touched. */
+    fun deletePage(pageId: String, thumbDir: File) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                pageRepository.delete(pageId)
+                pageTagRepository.clear(pageId)
+                File(thumbDir, pageId).delete()
+            } catch (e: Exception) { return@launch }
             loadData()
         }
     }

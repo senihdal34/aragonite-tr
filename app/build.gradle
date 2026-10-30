@@ -13,6 +13,7 @@ android {
     compileSdk 36
 
     defaultConfig {
+        manifestPlaceholders = [appLabel: "@string/app_name"]
         applicationId "io.aragonite.notes"
         minSdk 29
         targetSdk 35
@@ -81,7 +82,10 @@ android {
 
     buildTypes {
         debug {
-            if (sideBySide) applicationIdSuffix ".debug"
+            if (sideBySide) {
+                applicationIdSuffix ".debug"
+                manifestPlaceholders = [appLabel: "A Deus Notebook TEST"]   // so the test copy is not mistaken for the real app
+            }
             buildConfigField("boolean", "SIDE_BY_SIDE", sideBySide.toString())
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'

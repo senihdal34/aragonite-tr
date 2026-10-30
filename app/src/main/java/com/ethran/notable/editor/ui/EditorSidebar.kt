@@ -405,7 +405,13 @@ fun EditorSidebar(
         SidebarIconButton(
             iconId = R.drawable.home,
             contentDescription = "home",
-            onClick = { navController.navigate("library") }
+            // The newspaper Home is the hub: weekly planner, notes, pinned notes.
+            onClick = {
+                navController.navigate(com.ethran.notable.ui.views.HomeDestination.route) {
+                    popUpTo(com.ethran.notable.ui.views.HomeDestination.route) { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
         )
 
         // Menu

@@ -155,7 +155,12 @@ fun NotableNavHost(
                     viewModel = viewModel,
                     onOpenPage = { pageId -> appNavigator.navController.navigate("editor/$pageId") },
                     onSettings = { appNavigator.navController.navigate(SettingsDestination.route) },
-                    onCreateNewPage = { appNavigator.onCreateNewQuickPage(appRepository, null) }
+                    onCreateNewPage = { appNavigator.onCreateNewQuickPage(appRepository, null) },
+                    onOpenPlanner = { bookId, pageId ->
+                        appNavigator.navController.navigate(
+                            com.ethran.notable.editor.EditorDestination.createRoute(pageId, bookId)
+                        )
+                    }
                 )
                 appNavigator.cleanCurrentPageId()
             }

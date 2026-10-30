@@ -24,7 +24,9 @@ object VaultTagScanner {
      * Refresh the tag cache in the background. Call from app initialization.
      */
     fun refreshCache(inboxPath: String) {
-        _cachedTags.value = scanTags(inboxPath)
+        // Frequent tags from earlier exports first, then the names of the Boox Notes notebooks.
+        _cachedTags.value = (scanTags(inboxPath) + runCatching { BooxNoteNames.scan() }.getOrDefault(emptyList()))
+            .distinctBy { it.lowercase() }
         log.i("Tag cache refreshed: ${_cachedTags.value.size} tags")
     }
 

@@ -60,6 +60,13 @@ fun GeneralSettings(
             })
 
         SettingToggleRow(
+            label = stringResource(R.string.start_in_planner),
+            value = settings.startInPlanner,
+            onToggle = { isChecked ->
+                onSettingsChange(settings.copy(startInPlanner = isChecked))
+            })
+
+        SettingToggleRow(
             label = stringResource(R.string.use_onyx_neotools_may_cause_crashes),
             value = settings.neoTools,
             onToggle = { isChecked ->

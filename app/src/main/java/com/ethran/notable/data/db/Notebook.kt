@@ -56,6 +56,9 @@ interface NotebookDao {
     @Query("SELECT * FROM notebook WHERE id = (:notebookId)")
     suspend fun getById(notebookId: String): Notebook?
 
+    @Query("SELECT * FROM notebook WHERE title = :title AND parentFolderId IS NULL LIMIT 1")
+    suspend fun findByTitle(title: String): Notebook?
+
     @Query("UPDATE notebook SET openPageId=:pageId WHERE id=:notebookId")
     suspend fun setOpenPageId(notebookId: String, pageId: String)
 
@@ -104,6 +107,8 @@ class BookRepository @Inject constructor(
     fun getAllInFolder(folderId: String? = null): LiveData<List<Notebook>> {
         return notebookDao.getAllInFolder(folderId)
     }
+
+    suspend fun findByTitle(title: String): Notebook? = notebookDao.findByTitle(title)
 
     suspend fun getById(notebookId: String): Notebook? {
         return notebookDao.getById(notebookId)

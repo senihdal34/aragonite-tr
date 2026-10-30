@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aragonite Hafta ve Sabit Notlar</title>
+<style>
+:root{--ink:#111;--g1:#555;--g2:#999;--g3:#E3E3E0;--paper:#F6F6F2;--s:.5}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#d9d8d3;color:#222;font:16px/1.45 -apple-system,"Helvetica Neue",Arial,sans-serif;padding:32px 24px 80px}
+.wrap{max-width:1500px;margin:0 auto}
+h1.pg{font-size:28px;letter-spacing:-.01em}
+p.pg{color:#555;max-width:900px;margin-top:6px}
+h2.sec{font-size:22px;margin:42px 0 8px;display:flex;gap:12px;align-items:baseline}
+h2.sec small{font-size:14px;font-weight:400;color:#666}
+.why{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:10px 0 18px}
+.why div{background:#fff;border:1px solid #c8c8c2;border-radius:10px;padding:12px 14px;font-size:14px}
+.why b{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#777;margin-bottom:4px}
+.row{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.frame{position:relative;border:10px solid #1b1b1b;border-radius:22px;background:#1b1b1b;cursor:zoom-in;flex:none}
+.frame .lbl{position:absolute;left:0;top:-30px;font-size:13px;color:#555;white-space:nowrap}
+.view{overflow:hidden;background:var(--paper);filter:grayscale(1)}
+.screen{transform-origin:0 0;transform:scale(var(--s));background:var(--paper);color:var(--ink);overflow:hidden;position:relative;font-family:Georgia,"Times New Roman",serif}
+.p .view{width:calc(992px*var(--s));height:calc(1323px*var(--s))}.p .screen{width:992px;height:1323px}
+.l .view{width:calc(1323px*var(--s));height:calc(992px*var(--s))}.l .screen{width:1323px;height:992px}
+.c .view{width:calc(992px*var(--s));height:calc(600px*var(--s))}.c .screen{width:992px;height:600px}
+#ov{position:fixed;inset:0;background:rgba(20,20,20,.88);display:none;align-items:center;justify-content:center;z-index:9;cursor:zoom-out}#ov.on{display:flex}
+.thumb{background:#fff;overflow:hidden}.thumb img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+.sans{font-family:-apple-system,Helvetica,Arial,sans-serif}
+.caps{font:600 14px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:var(--g1)}
+.pad{padding:44px 56px}
+.meta{display:flex;justify-content:space-between;padding-bottom:12px;border-bottom:1.5px solid var(--ink)}
+.ttl{font-size:112px;font-weight:700;letter-spacing:-.03em;line-height:1;margin:12px 0 8px;text-align:center}
+.dbl{border-top:5px solid var(--ink);border-bottom:1.5px solid var(--ink);height:11px}
+.nav{display:flex;justify-content:center;font:600 17px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase;padding:14px 0;border-bottom:1.5px solid var(--ink);align-items:center}
+.nav span{padding:0 22px;border-right:1.5px solid var(--g2)}.nav span:last-child{border:0}
+.nav .on{background:var(--ink);color:#fff;padding:7px 22px;margin:-7px 0;border:0}
+.ico{display:inline-block;position:relative}
+/* sabit şeridi */
+.strip{display:flex;gap:18px;padding:14px 0;border-bottom:1.5px solid var(--ink);align-items:center}
+.strip .k{writing-mode:vertical-rl;transform:rotate(180deg)}
+.strip .it{display:flex;gap:12px;align-items:center;flex:1;min-width:0}
+.strip .it .thumb{width:62px;height:83px;border:1.5px solid var(--ink);flex:none}
+.strip .it b{font-size:22px;line-height:1.1;letter-spacing:-.01em}
+.strip .it i{display:block;font:600 12px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--g1);font-style:normal;margin-top:6px}
+/* hafta */
+.day{display:grid;grid-template-columns:118px 1fr;border-bottom:1.5px solid var(--ink)}
+.day .d{padding:12px 0 12px 0;text-align:center;border-right:1.5px solid var(--ink)}
+.day .d .n{font-size:54px;font-weight:700;line-height:1;letter-spacing:-.03em}
+.day .d .w{margin-bottom:4px}
+.day.today .d{background:var(--ink);color:#fff}.day.today .d .caps{color:#fff}
+.day .b{padding:12px 0 12px 22px}
+.ev{display:flex;gap:16px;align-items:baseline;font-size:25px;line-height:1.25;padding:3px 0}
+.ev .t{font:700 16px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.1em;color:var(--g1);width:64px;flex:none}
+.ev b::before{content:"▪";margin-right:10px;color:var(--ink)}
+.tk{display:flex;gap:14px;align-items:flex-start;font-size:25px;line-height:1.25;padding:5px 0}
+.tk i{width:26px;height:26px;border:2.5px solid var(--ink);flex:none;margin-top:3px;position:relative}
+.tk.done{color:var(--g1);text-decoration:line-through;text-decoration-thickness:2px}
+.tk.done i{background:var(--ink)}
+.tk.done i::after{content:"";position:absolute;left:5px;top:0;width:8px;height:15px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(40deg)}
+.tk .c{font:700 12px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--g1);border:1.5px solid var(--g2);padding:3px 6px;margin-left:10px;text-decoration:none;display:inline-block;vertical-align:2px}
+.empty{font-size:22px;font-style:italic;color:var(--g2);padding:6px 0}
+.add{display:flex;justify-content:center;padding-top:22px}
+.add b{border:2.5px solid var(--ink);padding:15px 36px;font:700 17px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase}
+.hint{font:italic 18px/1.3 Georgia,serif;color:var(--g1);text-align:center;margin-top:12px}
+.cols{display:grid;grid-template-columns:repeat(7,1fr);border-top:0;height:100%}
+.cols .cl{border-right:1.5px solid var(--g2);padding:0 12px}
+.cols .cl:last-child{border:0}
+.cols .cl.today{border:2.5px solid var(--ink);padding:0 11px;background:#fff}
+.cols .ch{padding:12px 0;border-bottom:1.5px solid var(--ink);display:flex;align-items:baseline;gap:10px}
+.cols .ch .n{font-size:46px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.cols .cl.today .ch{background:var(--ink);color:#fff;margin:0 -11px;padding:12px 11px}.cols .cl.today .ch .caps{color:#fff}
+.cols .ev{font-size:20px;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid var(--g3)}
+.cols .tk{font-size:20px;gap:10px;padding:7px 0}.cols .tk i{width:22px;height:22px;margin-top:2px}
+.cols .tk.done i::after{left:3px;width:7px;height:13px}
+/* kulaklar */
+.ears{display:grid;grid-template-columns:150px 1fr 150px;gap:14px;align-items:center}
+.ear{border:2px solid var(--ink);padding:8px;text-align:center}.ear .thumb{height:96px;border:1.5px solid var(--ink)}.ear b{display:block;font-size:17px;line-height:1.1;margin-top:6px}
+.leadmini{display:grid;grid-template-columns:230px 1fr;gap:26px;padding:20px 0}
+.leadmini .thumb{height:310px;border:2px solid var(--ink)}
+.leadmini h2{font-size:48px;line-height:1.02;letter-spacing:-.02em;margin:10px 0}
+</style></head>
+<body><div class="wrap">
+<h1 class="pg">Sabit notlar ve haftalık görünüm</h1>
+<p class="pg">Gazete düzeniyle aynı dil (siyah, beyaz, iki gri, serif). Etkinlikler ve görevler örnektir (SENTETİK); not resimleri tabletinden. Büyütmek için ekrana dokun.</p>
+<div id="app"></div>
+</div><div id="ov"></div>
+<script>
+SCRIPT_HERE
+</script></body></html>

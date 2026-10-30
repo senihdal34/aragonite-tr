@@ -86,12 +86,15 @@ class OnyxInputHandler(
         // - erase :  `onBeginRawErasing()` -> `onRawErasingTouchPointMoveReceived()` -> `onRawErasingTouchPointListReceived()` -> `onEndRawErasing()`
 
         override fun onBeginRawDrawing(p0: Boolean, p1: TouchPoint?) {
+            com.ethran.notable.gestures.PalmGuard.penSeen()
         }
 
         override fun onEndRawDrawing(p0: Boolean, p1: TouchPoint?) {
+            com.ethran.notable.gestures.PalmGuard.penSeen()
         }
 
         override fun onRawDrawingTouchPointMoveReceived(p0: TouchPoint?) {
+            com.ethran.notable.gestures.PalmGuard.penSeen()
         }
 
         override fun onRawDrawingTouchPointListReceived(plist: TouchPointList) =
@@ -100,6 +103,7 @@ class OnyxInputHandler(
 
         // Handle button/eraser tip of the pen:
         override fun onBeginRawErasing(p0: Boolean, p1: TouchPoint?) {
+            com.ethran.notable.gestures.PalmGuard.penSeen()
             if (touchHelper == null) return
             if (GlobalAppSettings.current.openGLRendering) {
                 prepareForPartialUpdate(drawCanvas, touchHelper!!)
@@ -120,6 +124,7 @@ class OnyxInputHandler(
             onRawErasingList(plist)
 
         override fun onRawErasingTouchPointMoveReceived(p0: TouchPoint?) {
+            com.ethran.notable.gestures.PalmGuard.penSeen()
 //            if (p0 == null) return
         }
 
@@ -128,6 +133,7 @@ class OnyxInputHandler(
         }
 
         override fun onPenActive(point: TouchPoint?) {
+            com.ethran.notable.gestures.PalmGuard.penSeen()
             super.onPenActive(point)
         }
     }
