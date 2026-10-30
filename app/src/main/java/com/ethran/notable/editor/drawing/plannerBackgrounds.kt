@@ -44,7 +44,7 @@ private fun checkbox(canvas: Canvas, x: Float, bottom: Float, size: Float = 34f)
     canvas.drawRect(x, bottom - size, x + size, bottom, box)
 }
 
-/** Weekly planner: seven rows, one per day. Today's row is inverted; the date comes from the device clock. */
+/** Old handwritten week page (kept so pages that already have ink still draw). Seven rows, one per day. Today's row is inverted; the date comes from the device clock. */
 fun drawPlannerWeekBg(canvas: Canvas, scroll: Offset, scale: Float, monday: LocalDate, today: LocalDate = LocalDate.now()) {
     val w = canvas.width / scale
     val h = canvas.height / scale

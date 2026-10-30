@@ -1,22 +1,53 @@
 appId: io.aragonite.notes.debug
 ---
-# Start page is the weekly planner (editor on a planner page); the sidebar home button leads to the
-# newspaper Home, whose HAFTA tab opens the planner again.
+# Home opens on the HAFTA page (week number, year progress, one column per day with typed to-do items).
+# Week tools move the week; NOTLAR shows the note cards with delete and tag buttons; a topic can be deleted.
 - launchApp
 - extendedWaitUntil:
-    visible: "home"
+    visible: "YIL %.* TAMAMLANDI"
     timeout: 40000
-- tapOn: "home"
+- assertVisible: "BUGÜN.*"
+- assertVisible: ".*/5[23]"
+# a to-do item on today, saved automatically
+- tapOn: "Madde ekle bugün"
+- inputText: "e2egorev"
+- hideKeyboard
+- tapOn: "Tamamlandı işaretle"
+- tapOn: "SONRAKİ ›"
+- tapOn: "BU HAFTA"
+- assertVisible: "BUGÜN.*"
+- tapOn: "NOTLAR"
 - extendedWaitUntil:
-    visible: "NOTLAR"
+    visible: "# SEÇ"
     timeout: 20000
-- assertVisible: ".*SABİT"
-- assertVisible: "HAFTA"
-- tapOn: "HAFTA"
+- assertVisible: "BUGÜN|DÜN|.* ÖNCE"
+# tag: add a new one; it becomes a topic
+- tapOn:
+    text: "\\+ ETİKET"
+    index: 0
+- inputText: "e2etest"
+- tapOn: "EKLE"
 - extendedWaitUntil:
-    visible: "home"
-    timeout: 30000
-- tapOn: "home"
+    visible: "E2ETEST"
+    timeout: 10000
+# delete the topic: asks first
+- tapOn: "E2ETEST"
+- tapOn: "KONUYU SİL"
+- assertVisible: "KONU SİLİNSİN Mİ\\?"
+- tapOn: "SİL"
 - extendedWaitUntil:
-    visible: "NOTLAR"
-    timeout: 20000
+    notVisible: "E2ETEST"
+    timeout: 10000
+# delete a note: asks first, "Vazgeç" keeps it, "Sil" removes it
+- tapOn:
+    text: "Notu sil"
+    index: 0
+- assertVisible: "NOT SİLİNSİN Mİ\\?"
+- tapOn: "VAZGEÇ"
+- tapOn:
+    text: "Notu sil"
+    index: 0
+- tapOn: "SİL"
+- extendedWaitUntil:
+    notVisible: "NOT SİLİNSİN Mİ\\?"
+    timeout: 10000

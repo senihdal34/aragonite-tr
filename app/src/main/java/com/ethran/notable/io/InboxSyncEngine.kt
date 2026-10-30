@@ -50,10 +50,12 @@ object InboxSyncEngine {
     suspend fun syncInboxPage(
         appRepository: AppRepository,
         pageId: String,
-        tags: List<String>,
+        chosenTags: List<String>,
         context: Context,
         exportEngine: ExportEngine
     ) {
+        // Tags picked in the capture bar plus the ones attached from the Home screen.
+        val tags = (chosenTags + appRepository.pageTags.get(pageId)).distinct()
         log.i("Starting inbox sync for page $pageId with tags: $tags")
 
         val pageWithStrokes = appRepository.pageRepository.getWithStrokeById(pageId)

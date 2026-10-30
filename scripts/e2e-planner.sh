@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# End-to-end test: the app opens on the weekly planner, Home is reachable and HAFTA returns to it,
-# and the planner notebook holds a week page and a to-do page for this week and the next 8 weeks.
+# End-to-end test: Home opens on the week page, a typed to-do item is saved and ticked, a tag is added and the topic
+# deleted, a note is deleted.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home}
@@ -25,16 +25,22 @@ adb shell am force-stop $PKG; sleep 2
 
 D=$(mktemp -d); adb pull /sdcard/Documents/notabledb-debug/. "$D" >/dev/null
 sqlite3 "$D/app_database" 'PRAGMA wal_checkpoint(TRUNCATE);' >/dev/null
-pages=$(sqlite3 "$D/app_database" "select count(*) from Page where background like 'planner-week:%'")
-todos=$(sqlite3 "$D/app_database" "select count(*) from Page where background like 'planner-todo:%'")
+today=$(python3 -c "import datetime as d; print(d.date.today())")
+todo=$(sqlite3 "$D/app_database" "select value from Kv where key='todo:$today'")
 books=$(sqlite3 "$D/app_database" "select count(*) from Notebook where title='Planlayıcı'")
-monday=$(python3 -c "import datetime as d; t=d.date.today(); print(t-d.timedelta(days=t.weekday()))")
-cur=$(sqlite3 "$D/app_database" "select count(*) from Page where background='planner-week:$monday'")
+planner_pages=$(sqlite3 "$D/app_database" "select count(*) from Page where background like 'planner-%'")
+notes=$(sqlite3 "$D/app_database" "select count(*) from Page where background='inbox'")
+tags=$(sqlite3 "$D/app_database" "select count(*) from Kv where key like 'pagetags:%' and value like '%e2etest%'")
+hidden=$(sqlite3 "$D/app_database" "select count(*) from Kv where key='hiddentopics' and value like '%e2etest%'")
 rm -rf "$D"
 fail=0
 check() { if [ "$2" = "$3" ]; then echo "PASS  $1 ($2)"; else echo "FAIL  $1 (got $2, expected $3)"; fail=1; fi; }
-check "one Planlayıcı notebook" "$books" 1
-check "week pages (this week + 8 ahead)" "$pages" 9
-check "to-do pages" "$todos" 9
-check "page for the current week exists" "$cur" 1
+has() { if echo "$2" | grep -q "$3"; then echo "PASS  $1"; else echo "FAIL  $1 (got: $2)"; fail=1; fi; }
+has "to-do text saved for today" "$todo" "e2egorev"
+has "to-do marked done" "$todo" '"done":true'
+check "no planner notebook any more" "$books" 0
+check "no planner pages" "$planner_pages" 0
+check "one note deleted (seed has 5)" "$notes" 4
+check "deleted topic is off every note" "$tags" 0
+check "deleted topic is hidden" "$hidden" 1
 exit $fail

@@ -452,7 +452,7 @@ fun drawBg(
                 "hexed" -> drawHexedBg(canvas, scroll, scale)
                 "inbox" -> drawInboxBg(canvas, scroll, scale)
                 else -> {
-                    val week = com.ethran.notable.planner.PlannerWeeks.parseWeek(background)
+                    val week = com.ethran.notable.planner.PlannerWeeks.parseLegacyWeek(background)
                     val todo = com.ethran.notable.planner.PlannerWeeks.parseTodo(background)
                     when {
                         week != null -> drawPlannerWeekBg(canvas, scroll, scale, week)

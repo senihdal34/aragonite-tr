@@ -9,6 +9,7 @@ import com.ethran.notable.data.db.KvProxy
 import com.ethran.notable.data.db.KvRepository
 import com.ethran.notable.data.db.Page
 import com.ethran.notable.data.db.PageRepository
+import com.ethran.notable.data.db.PageTagRepository
 import com.ethran.notable.data.db.StrokeRepository
 import com.ethran.notable.data.db.getPageIndex
 import com.ethran.notable.data.db.newPage
@@ -27,7 +28,8 @@ class AppRepository @Inject constructor(
     val imageRepository: ImageRepository,
     val annotationRepository: AnnotationRepository,
     val folderRepository: FolderRepository,
-    val kvProxy: KvProxy
+    val kvProxy: KvProxy,
+    val pageTags: PageTagRepository
 ) {
     suspend fun getNextPageIdFromBookAndPageOrCreate(
         notebookId: String,

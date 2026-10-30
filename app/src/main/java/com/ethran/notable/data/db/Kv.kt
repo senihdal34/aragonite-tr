@@ -45,6 +45,9 @@ interface KvDao {
     @Query("DELETE FROM kv WHERE `key`=:key")
     suspend fun delete(key: String)
 
+    @Query("SELECT * FROM kv WHERE `key` LIKE :prefix || '%'")
+    suspend fun getWithPrefix(prefix: String): List<Kv>
+
 }
 
 @Singleton
