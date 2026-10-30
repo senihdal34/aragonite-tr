@@ -78,17 +78,17 @@ interface PageDao {
     fun getSinglePagesInFolder(folderId: String? = null): LiveData<List<Page>>
 
     // --- Home screen queries ---
-    @Query("SELECT * FROM page WHERE pinned = 1 ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM page WHERE pinned = 1 AND background NOT LIKE 'planner-%' ORDER BY updatedAt DESC")
     fun getPinnedPages(): LiveData<List<Page>>
 
-    @Query("SELECT * FROM page WHERE pinned = 0 ORDER BY createdAt DESC LIMIT :limit")
+    @Query("SELECT * FROM page WHERE pinned = 0 AND background NOT LIKE 'planner-%' ORDER BY createdAt DESC LIMIT :limit")
     fun getRecentPages(limit: Int = 10): LiveData<List<Page>>
 
     // One-shot variants for ViewModels: an unobserved Room LiveData has no value (always null).
-    @Query("SELECT * FROM page WHERE pinned = 1 ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM page WHERE pinned = 1 AND background NOT LIKE 'planner-%' ORDER BY updatedAt DESC")
     suspend fun getPinnedPagesList(): List<Page>
 
-    @Query("SELECT * FROM page WHERE pinned = 0 ORDER BY createdAt DESC LIMIT :limit")
+    @Query("SELECT * FROM page WHERE pinned = 0 AND background NOT LIKE 'planner-%' ORDER BY createdAt DESC LIMIT :limit")
     suspend fun getRecentPagesList(limit: Int = 10): List<Page>
 
     @Query("UPDATE page SET title = :title WHERE id = :pageId")

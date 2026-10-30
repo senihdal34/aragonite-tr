@@ -471,7 +471,11 @@ fun Toolbar(
                     iconId = R.drawable.home, // Replace with your library icon resource
                     contentDescription = "library",
                     onSelect = {
-                        navController.navigate("library") // Navigate to main library
+                        // The newspaper Home is the hub: weekly planner, notes, pinned notes.
+                        navController.navigate(com.ethran.notable.ui.views.HomeDestination.route) {
+                            popUpTo(com.ethran.notable.ui.views.HomeDestination.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 )
                 Box(

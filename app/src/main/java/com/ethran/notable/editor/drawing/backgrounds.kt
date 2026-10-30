@@ -452,7 +452,13 @@ fun drawBg(
                 "hexed" -> drawHexedBg(canvas, scroll, scale)
                 "inbox" -> drawInboxBg(canvas, scroll, scale)
                 else -> {
-                    throw IllegalArgumentException("Unknown background type: $background")
+                    val week = com.ethran.notable.planner.PlannerWeeks.parseWeek(background)
+                    val todo = com.ethran.notable.planner.PlannerWeeks.parseTodo(background)
+                    when {
+                        week != null -> drawPlannerWeekBg(canvas, scroll, scale, week)
+                        todo != null -> drawPlannerTodoBg(canvas, scroll, scale, todo)
+                        else -> throw IllegalArgumentException("Unknown background type: $background")
+                    }
                 }
             }
         }

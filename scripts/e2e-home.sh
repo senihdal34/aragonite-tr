@@ -19,7 +19,10 @@ adb shell am force-stop $PKG
 adb shell pm clear $PKG >/dev/null           # no thumbnails yet
 adb shell rm -rf /sdcard/Documents/notabledb-debug
 adb shell mkdir -p /sdcard/Documents/notabledb-debug
-adb push .e2e-seed/app_database /sdcard/Documents/notabledb-debug/app_database >/dev/null
+# These flows start from Home: the seed copy opens Home instead of the weekly planner.
+SEED=$(mktemp); cp .e2e-seed/app_database "$SEED"
+sqlite3 "$SEED" "update Kv set value=replace(value,'\"showWelcome\":false','\"showWelcome\":false,\"startInPlanner\":false') where key='APP_SETTINGS'"
+adb push "$SEED" /sdcard/Documents/notabledb-debug/app_database >/dev/null; rm -f "$SEED"
 adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE allow
 
 maestro test .maestro/20-home.yaml

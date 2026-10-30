@@ -26,6 +26,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,7 +50,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.ethran.notable.data.datastore.GlobalAppSettings
 import com.ethran.notable.data.db.Page
+import com.ethran.notable.planner.PlannerLaunch
+import com.ethran.notable.ui.showHint
+import com.ethran.notable.ui.viewmodels.HomeSection
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import com.ethran.notable.navigation.NavigationDestination
 import com.ethran.notable.ui.components.PagePreview
 import com.ethran.notable.ui.viewmodels.HomeUiState
@@ -75,10 +83,21 @@ fun HomeView(
     viewModel: HomeViewModel,
     onOpenPage: (String) -> Unit,
     onSettings: () -> Unit,
-    onCreateNewPage: () -> Unit = {}
+    onCreateNewPage: () -> Unit = {},
+    onOpenPlanner: (bookId: String, pageId: String) -> Unit = { _, _ -> }
 ) {
     val state by viewModel.uiState.collectAsState()
     val selected by viewModel.selectedTopic.collectAsState()
+    val section by viewModel.section.collectAsState()
+    val hintScope = rememberCoroutineScope()
+
+    // The weekly planner is the start page: open it once per app start.
+    LaunchedEffect(Unit) {
+        if (GlobalAppSettings.current.startInPlanner && !PlannerLaunch.done) {
+            PlannerLaunch.done = true
+            viewModel.openPlanner(onOpenPlanner)
+        }
+    }
 
     // Refresh data when returning from the editor (on resume)
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -104,7 +123,14 @@ fun HomeView(
         setInput = viewModel::setInputTag,
         addTopic = { viewModel.addTag(input); adding = false },
         removeTopic = { tag -> viewModel.removeTag(tag) },
-        unpin = { id -> viewModel.togglePin(id, true) }
+        unpin = { id -> viewModel.togglePin(id, true) },
+        planner = { viewModel.openPlanner(onOpenPlanner) },
+        section = viewModel::selectSection,
+        togglePin = { page ->
+            val pinned = state.pinnedPages.any { it.id == page.id }
+            viewModel.togglePin(page.id, pinned)
+            showHint(if (pinned) "Sabitten kaldırıldı" else "Sabitlendi", hintScope, 1200)
+        }
     )
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Paper)) {
@@ -114,8 +140,11 @@ fun HomeView(
             Modifier.fillMaxSize().verticalScroll(scroll)
                 .padding(horizontal = if (landscape) 50.dp else 56.dp, vertical = if (landscape) 34.dp else 44.dp)
         ) {
-            Masthead(state, selected, landscape, actions, adding, input)
-            if (landscape) {
+            Masthead(state, selected, section, landscape, actions, adding, input)
+            if (section == HomeSection.Pinned) {
+                PinnedPage(state, actions)
+                NewNoteButton(actions, Modifier.align(Alignment.CenterHorizontally).padding(top = 26.dp, bottom = 20.dp))
+            } else if (landscape) {
                 Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
                     Column(Modifier.weight(1f).padding(end = 36.dp)) {
                         Stories(shown, state, selected, landscape = true, actions = actions)
@@ -124,10 +153,6 @@ fun HomeView(
                 }
             } else {
                 Stories(shown, state, selected, landscape = false, actions = actions)
-                if (state.pinnedPages.isNotEmpty()) {
-                    Spacer(Modifier.height(10.dp))
-                    PinnedBox(state, actions, Modifier.fillMaxWidth().border(2.5.dp, Ink).padding(16.dp, 14.dp))
-                }
                 NewNoteButton(actions, Modifier.align(Alignment.CenterHorizontally).padding(top = 26.dp, bottom = 20.dp))
             }
         }
@@ -143,7 +168,17 @@ private class HomeActions(
     val setInput: (String) -> Unit,
     val addTopic: () -> Unit,
     val removeTopic: (String) -> Unit,
-    val unpin: (String) -> Unit
+    val unpin: (String) -> Unit,
+    val planner: () -> Unit,
+    val section: (HomeSection) -> Unit,
+    val togglePin: (Page) -> Unit
+)
+
+/** Tap opens the note, a long press pins or unpins it. */
+@OptIn(ExperimentalFoundationApi::class)
+private fun Modifier.openOrPin(a: HomeActions, page: Page) = combinedClickable(
+    interactionSource = MutableInteractionSource(), indication = null,
+    onClick = { a.open(page.id) }, onLongClick = { a.togglePin(page) }
 )
 
 private fun Modifier.tap(onClick: () -> Unit) = clickable(
@@ -165,7 +200,8 @@ private fun Rule(thickness: Dp = 1.5.dp, color: Color = Ink) =
 
 @Composable
 private fun Masthead(
-    state: HomeUiState, selected: String?, landscape: Boolean, a: HomeActions, adding: Boolean, input: String
+    state: HomeUiState, selected: String?, section: HomeSection, landscape: Boolean,
+    a: HomeActions, adding: Boolean, input: String
 ) {
     val date = remember { SimpleDateFormat("EEEE, d MMMM yyyy", TR).format(Date()) }
     Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween,
@@ -180,13 +216,96 @@ private fun Masthead(
     }
     Rule()
     Text(
-        "Notlar", fontFamily = Serif, fontWeight = FontWeight.Bold, fontSize = if (landscape) 100.sp else 116.sp,
+        if (section == HomeSection.Pinned) "Sabit" else "Notlar", fontFamily = Serif, fontWeight = FontWeight.Bold,
+        fontSize = if (landscape) 100.sp else 116.sp,
         letterSpacing = (-3).sp, textAlign = if (landscape) TextAlign.Start else TextAlign.Center,
         color = Ink, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
     )
     Rule(5.dp); Spacer(Modifier.height(5.dp)); Rule()
-    SectionNav(state, selected, a)
-    if (adding) TopicInput(input, a)
+    MainNav(section, a)
+    if (section == HomeSection.Notes) {
+        PinnedStrip(state, a)
+        SectionNav(state, selected, a)
+        if (adding) TopicInput(input, a)
+    }
+}
+
+/** HAFTA opens the weekly planner; NOTLAR and SABİT switch the list below. */
+@Composable
+private fun MainNav(section: HomeSection, a: HomeActions) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically) {
+        NavItem("Hafta", false, last = false, big = true) { a.planner() }
+        NavItem("Notlar", section == HomeSection.Notes, last = false, big = true) { a.section(HomeSection.Notes) }
+        NavItem("★ Sabit", section == HomeSection.Pinned, last = true, big = true) { a.section(HomeSection.Pinned) }
+    }
+    Rule()
+}
+
+/** Pinned notes in one row under the tabs: always visible, one tap to open, hold a card to unpin. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PinnedStrip(state: HomeUiState, a: HomeActions) {
+    if (state.pinnedPages.isEmpty()) return
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically
+    ) {
+        Caps("Sabit", 12, Grey1, FontWeight.Bold, Modifier.width(52.dp))
+        state.pinnedPages.take(4).forEach { p ->
+            Row(
+                Modifier.weight(1f).combinedClickable(
+                    interactionSource = MutableInteractionSource(), indication = null,
+                    onClick = { a.open(p.id) }, onLongClick = { a.togglePin(p) }
+                ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(Modifier.width(56.dp).height(75.dp).border(1.5.dp, Ink)) {
+                    PagePreview(Modifier.fillMaxSize(), p.id, state.thumbRevision, ContentScale.Crop, Alignment.TopCenter, Color.White)
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(p.title.ifBlank { "İsimsiz Not" }, fontFamily = Serif, fontWeight = FontWeight.Bold, fontSize = 20.sp,
+                    lineHeight = 22.sp, color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+    Rule()
+}
+
+/** The "★ Sabit" page: every pinned note as a row. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PinnedPage(state: HomeUiState, a: HomeActions) {
+    if (state.pinnedPages.isEmpty()) {
+        Text("Sabit not yok. Bir notu sabitlemek için kartına basılı tut.", fontFamily = Serif, fontStyle = FontStyle.Italic,
+            fontSize = 26.sp, color = Grey1, modifier = Modifier.padding(vertical = 40.dp))
+        return
+    }
+    state.pinnedPages.forEach { p ->
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = 14.dp).combinedClickable(
+                interactionSource = MutableInteractionSource(), indication = null,
+                onClick = { a.open(p.id) }, onLongClick = { a.togglePin(p) }
+            ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.width(110.dp).height(147.dp).border(2.dp, Ink)) {
+                PagePreview(Modifier.fillMaxSize(), p.id, state.thumbRevision, ContentScale.Crop, Alignment.TopCenter, Color.White)
+            }
+            Spacer(Modifier.width(24.dp))
+            Column(Modifier.weight(1f)) {
+                Text(p.title.ifBlank { "İsimsiz Not" }, fontFamily = Serif, fontWeight = FontWeight.Bold, fontSize = 38.sp,
+                    letterSpacing = (-0.5).sp, color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Caps(formatDate(p.createdAt), 14, Grey1, modifier = Modifier.padding(top = 8.dp))
+                state.excerpts[p.id]?.let {
+                    Text(it, fontFamily = Serif, fontStyle = FontStyle.Italic, fontSize = 22.sp, lineHeight = 29.sp,
+                        color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+                }
+            }
+            Caps("Kaldır", 14, Grey1, modifier = Modifier.tap { a.unpin(p.id) }.padding(14.dp))
+        }
+        Rule(1.5.dp, Grey2)
+    }
 }
 
 @Composable
@@ -207,13 +326,13 @@ private fun SectionNav(state: HomeUiState, selected: String?, a: HomeActions) {
 }
 
 @Composable
-private fun NavItem(label: String, on: Boolean, last: Boolean, onClick: () -> Unit) {
+private fun NavItem(label: String, on: Boolean, last: Boolean, big: Boolean = false, onClick: () -> Unit) {
     Box(
-        Modifier.height(44.dp).tap(onClick)
+        Modifier.height(if (big) 54.dp else 44.dp).tap(onClick)
             .background(if (on) Ink else Color.Transparent)
-            .padding(horizontal = 22.dp),
+            .padding(horizontal = if (big) 34.dp else 22.dp),
         contentAlignment = Alignment.Center
-    ) { Caps(label, 17, if (on) Color.White else Ink, FontWeight.SemiBold) }
+    ) { Caps(label, if (big) 20 else 17, if (on) Color.White else Ink, FontWeight.SemiBold) }
     if (!last && !on) Box(Modifier.width(1.5.dp).height(26.dp).background(Grey2))
 }
 
@@ -274,11 +393,11 @@ private fun Lead(page: Page, state: HomeUiState, selected: String?, landscape: B
     val thumbW = if (landscape) 300.dp else 350.dp
     val thumbH = if (landscape) 380.dp else 470.dp
     Row(Modifier.fillMaxWidth().padding(vertical = if (landscape) 20.dp else 26.dp)) {
-        Box(Modifier.width(thumbW).height(thumbH).border(2.dp, Ink).tap { a.open(page.id) }) {
+        Box(Modifier.width(thumbW).height(thumbH).border(2.dp, Ink).openOrPin(a, page)) {
             PagePreview(Modifier.fillMaxSize(), page.id, state.thumbRevision, ContentScale.Crop, Alignment.TopCenter, Color.White)
         }
         Spacer(Modifier.width(if (landscape) 28.dp else 34.dp))
-        Column(Modifier.weight(1f).tap { a.open(page.id) }) {
+        Column(Modifier.weight(1f).openOrPin(a, page)) {
             Caps(if (selected == null) "Son not · ${formatDate(page.createdAt)}" else "#$selected · ${formatDate(page.createdAt)}", 14, Grey1, FontWeight.Bold)
             Text(
                 page.title.ifBlank { "İsimsiz Not" }, fontFamily = Serif, fontWeight = FontWeight.Bold,
@@ -301,7 +420,7 @@ private fun Lead(page: Page, state: HomeUiState, selected: String?, landscape: B
 private fun Story(page: Page, state: HomeUiState, a: HomeActions, landscape: Boolean) {
     if (landscape) {
         // Wide card: small page on the left, headline and first lines on the right.
-        Row(Modifier.fillMaxWidth().tap { a.open(page.id) }) {
+        Row(Modifier.fillMaxWidth().openOrPin(a, page)) {
             Box(Modifier.width(128.dp).height(171.dp).border(1.5.dp, Ink)) {
                 PagePreview(Modifier.fillMaxSize(), page.id, state.thumbRevision, ContentScale.Crop, Alignment.TopCenter, Color.White)
             }
@@ -320,7 +439,7 @@ private fun Story(page: Page, state: HomeUiState, a: HomeActions, landscape: Boo
         }
         return
     }
-    Column(Modifier.tap { a.open(page.id) }) {
+    Column(Modifier.openOrPin(a, page)) {
         Box(Modifier.fillMaxWidth().height(200.dp).border(1.5.dp, Ink)) {
             PagePreview(Modifier.fillMaxSize(), page.id, state.thumbRevision, ContentScale.Crop, Alignment.TopCenter, Color.White)
         }
@@ -336,35 +455,10 @@ private fun Story(page: Page, state: HomeUiState, a: HomeActions, landscape: Boo
 // ---------- pinned notes, topic index, new note ----------
 
 @Composable
-private fun PinnedBox(state: HomeUiState, a: HomeActions, modifier: Modifier) {
-    Column(modifier) {
-        Caps("Sabitlenen", 14, Grey1, FontWeight.Bold, Modifier.padding(bottom = 10.dp))
-        state.pinnedPages.take(3).forEach { p ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(70.dp).height(94.dp).border(1.5.dp, Ink).tap { a.open(p.id) }) {
-                    PagePreview(Modifier.fillMaxSize(), p.id, state.thumbRevision, ContentScale.Crop, Alignment.TopCenter, Color.White)
-                }
-                Spacer(Modifier.width(18.dp))
-                Column(Modifier.weight(1f).tap { a.open(p.id) }) {
-                    Text(p.title.ifBlank { "İsimsiz Not" }, fontFamily = Serif, fontWeight = FontWeight.Bold, fontSize = 30.sp,
-                        color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Caps(formatDate(p.createdAt), 13, Grey1, modifier = Modifier.padding(top = 6.dp))
-                }
-                Caps("Kaldır", 13, Grey1, modifier = Modifier.tap { a.unpin(p.id) }.padding(12.dp))
-            }
-        }
-    }
-}
-
-@Composable
 private fun Rail(state: HomeUiState, selected: String?, a: HomeActions) {
     Row(Modifier.width(350.dp).fillMaxHeight()) {
         Box(Modifier.width(1.5.dp).fillMaxHeight().background(Ink))
         Column(Modifier.padding(start = 28.dp)) {
-            if (state.pinnedPages.isNotEmpty()) {
-                PinnedBox(state, a, Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 10.dp))
-                Rule()
-            }
             Caps("Konular", 14, Grey1, FontWeight.Bold, Modifier.padding(top = 16.dp, bottom = 8.dp))
             Rule()
             if (state.topicGroups.isEmpty()) {

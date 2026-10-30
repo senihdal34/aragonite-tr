@@ -10,6 +10,7 @@ import com.ethran.notable.data.db.TagPriorityDao
 import com.ethran.notable.data.datastore.GlobalAppSettings
 import com.ethran.notable.io.ExportedExcerpts
 import com.ethran.notable.io.ThumbnailGenerator
+import com.ethran.notable.planner.PlannerService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+
+enum class HomeSection { Notes, Pinned }
 
 data class TopicGroup(
     val tag: String,
@@ -41,11 +44,26 @@ class HomeViewModel @Inject constructor(
     private val pageRepository: PageRepository,
     private val annotationRepository: AnnotationRepository,
     private val tagPriorityDao: TagPriorityDao,
-    private val thumbnailGenerator: ThumbnailGenerator
+    private val thumbnailGenerator: ThumbnailGenerator,
+    private val plannerService: PlannerService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private val _section = MutableStateFlow(HomeSection.Notes)
+    val section: StateFlow<HomeSection> = _section.asStateFlow()
+    fun selectSection(s: HomeSection) { _section.value = s }
+
+    /** Creates the planner pages for this and the coming weeks if needed, then hands back the current week. */
+    fun openPlanner(onReady: (bookId: String, pageId: String) -> Unit) {
+        viewModelScope.launch {
+            val target = try {
+                withContext(Dispatchers.IO) { plannerService.openCurrentWeek() }
+            } catch (e: Exception) { null }
+            if (target != null) onReady(target.bookId, target.pageId)
+        }
+    }
 
     /** Topic the Home list is filtered by; null shows the latest notes. */
     private val _selectedTopic = MutableStateFlow<String?>(null)

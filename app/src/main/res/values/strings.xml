@@ -33,6 +33,9 @@
     <string name="gestures_swipe_right_action">Swipe Right Action</string>
     <string name="gestures_two_finger_swipe_left_action">Two Finger Swipe Left Action</string>
     <string name="gestures_two_finger_swipe_right_action">Two Finger Swipe Right Action</string>
+    <string name="start_in_planner">Open the weekly planner when the app starts</string>
+    <string name="palm_guard">Palm guard: ignore finger gestures while writing and at the bottom edge</string>
+    <string name="pen_button_toggle">Pen side button switches between pen and eraser</string>
     <string name="enable_quick_nav">Touch with three fingers to open QuickNav</string>
     <string name="work_in_progress">(work in progress)</string>
     <string name="toolbar_position_top">Top</string>

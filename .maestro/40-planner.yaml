@@ -1,0 +1,22 @@
+appId: io.aragonite.notes.debug
+---
+# Start page is the weekly planner (editor on a planner page); the sidebar home button leads to the
+# newspaper Home, whose HAFTA tab opens the planner again.
+- launchApp
+- extendedWaitUntil:
+    visible: "home"
+    timeout: 40000
+- tapOn: "home"
+- extendedWaitUntil:
+    visible: "NOTLAR"
+    timeout: 20000
+- assertVisible: ".*SABİT"
+- assertVisible: "HAFTA"
+- tapOn: "HAFTA"
+- extendedWaitUntil:
+    visible: "home"
+    timeout: 30000
+- tapOn: "home"
+- extendedWaitUntil:
+    visible: "NOTLAR"
+    timeout: 20000
