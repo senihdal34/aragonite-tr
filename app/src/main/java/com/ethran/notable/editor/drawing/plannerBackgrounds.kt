@@ -12,9 +12,9 @@ import java.time.LocalDate
 // All sizes are in page pixels (device pixels at zoom 1); the screen is about 1860 x 2480.
 
 private const val HEADER_H = 150f
-private const val LABEL_W = 250f
+private const val LABEL_W = 200f
 private const val LINES_PER_DAY = 5   // at least five to-dos per day
-private const val LINE_STEP = 72f
+private const val LINE_STEP = 62f   // compact: seven days of five lines fit one portrait screen
 private val TR = java.util.Locale("tr", "TR")
 
 private val serifBold = Typeface.create(Typeface.SERIF, Typeface.BOLD)
@@ -32,14 +32,14 @@ private val inkThin = paint(Color.BLACK, 2f)
 private val guide = paint(Color.GRAY, 1.5f)
 private val box = paint(Color.BLACK, 3f, Paint.Style.STROKE)
 private val fillInk = paint(Color.BLACK)
-private val titleP = paint(Color.BLACK, size = 66f, face = serifBold)
+private val titleP = paint(Color.BLACK, size = 56f, face = serifBold)
 private val summary = paint(Color.DKGRAY, size = 26f, face = sansBold).apply { textAlign = Paint.Align.RIGHT; letterSpacing = 0.08f }
 private val summaryBold = paint(Color.BLACK, size = 30f, face = sansBold).apply { textAlign = Paint.Align.RIGHT; letterSpacing = 0.1f }
 private val subP = paint(Color.DKGRAY, size = 34f, face = sansBold).apply { textAlign = Paint.Align.RIGHT; letterSpacing = 0.08f }
-private val dayName = paint(Color.BLACK, size = 36f, face = sansBold).apply { textAlign = Paint.Align.CENTER; letterSpacing = 0.12f }
-private val dayNameInv = paint(Color.WHITE, size = 36f, face = sansBold).apply { textAlign = Paint.Align.CENTER; letterSpacing = 0.12f }
-private val dayNum = paint(Color.BLACK, size = 96f, face = serifBold).apply { textAlign = Paint.Align.CENTER }
-private val dayNumInv = paint(Color.WHITE, size = 96f, face = serifBold).apply { textAlign = Paint.Align.CENTER }
+private val dayName = paint(Color.BLACK, size = 30f, face = sansBold).apply { textAlign = Paint.Align.CENTER; letterSpacing = 0.12f }
+private val dayNameInv = paint(Color.WHITE, size = 30f, face = sansBold).apply { textAlign = Paint.Align.CENTER; letterSpacing = 0.12f }
+private val dayNum = paint(Color.BLACK, size = 80f, face = serifBold).apply { textAlign = Paint.Align.CENTER }
+private val dayNumInv = paint(Color.WHITE, size = 80f, face = serifBold).apply { textAlign = Paint.Align.CENTER }
 private val sectionP = paint(Color.BLACK, size = 52f, face = serifBold)
 
 private fun checkbox(canvas: Canvas, x: Float, bottom: Float, size: Float = 34f) {
@@ -74,15 +74,15 @@ fun drawPlannerWeekBg(canvas: Canvas, scroll: Offset, scale: Float, monday: Loca
         val y1 = y0 + rowH
         val isToday = day == today
         if (isToday) canvas.drawRect(0f, y0, LABEL_W, y1, fillInk)
-        canvas.drawText(PlannerWeeks.DAY_NAMES[i].uppercase(TR), LABEL_W / 2f, y0 + 60f, if (isToday) dayNameInv else dayName)
-        canvas.drawText(day.dayOfMonth.toString(), LABEL_W / 2f, y0 + rowH * 0.5f + 40f, if (isToday) dayNumInv else dayNum)
-        canvas.drawText(PlannerWeeks.monthName(day).uppercase(TR), LABEL_W / 2f, y1 - 34f, if (isToday) dayNameInv else dayName)
+        canvas.drawText(PlannerWeeks.DAY_NAMES[i].uppercase(TR), LABEL_W / 2f, y0 + 46f, if (isToday) dayNameInv else dayName)
+        canvas.drawText(day.dayOfMonth.toString(), LABEL_W / 2f, y0 + rowH * 0.5f + 28f, if (isToday) dayNumInv else dayNum)
+        canvas.drawText(PlannerWeeks.monthName(day).uppercase(TR), LABEL_W / 2f, y1 - 24f, if (isToday) dayNameInv else dayName)
         canvas.drawLine(0f, y1, w, y1, ink)
 
         // writing lines with a check box in front of each
         for (k in 1..LINES_PER_DAY) {
             val ly = y0 + k * LINE_STEP
-            checkbox(canvas, LABEL_W + 28f, ly - 14f, 34f)
+            checkbox(canvas, LABEL_W + 28f, ly - 12f, 30f)
             if (k < LINES_PER_DAY) canvas.drawLine(LABEL_W + 28f, ly, w - 40f, ly, guide)
         }
     }

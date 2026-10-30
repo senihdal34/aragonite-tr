@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 private val Pill = RoundedCornerShape(50)
 
 /**
- * Week tool on a planner page: previous week, this week, next week. It sits in the free middle of the page's
+ * Week tool on a planner page: previous week, this week, next week, and a way to the notes list. It sits in the free middle of the page's
  * header band, so it does not cover anything you write.
  */
 @Composable
@@ -34,15 +34,20 @@ fun PlannerWeekBar(
     onPrevious: () -> Unit,
     onThisWeek: () -> Unit,
     onNext: () -> Unit,
+    onNotes: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    Row(modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
     Row(
-        modifier.padding(top = 10.dp).clip(Pill).background(Color.White).border(BorderStroke(1.5.dp, Color.Black), Pill).padding(horizontal = 6.dp),
+        Modifier.clip(Pill).background(Color.White).border(BorderStroke(1.5.dp, Color.Black), Pill).padding(horizontal = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically
     ) {
         BarButton("‹ Önceki", false, onPrevious)
         BarButton("Bu hafta", isCurrentWeek, onThisWeek)
         BarButton("Sonraki ›", false, onNext)
+    }
+    // Back to the notes list on Home.
+    Box(Modifier.clip(Pill).background(Color.White).border(BorderStroke(1.5.dp, Color.Black), Pill)) { BarButton("Notlar ›", false, onNotes) }
     }
 }
 
@@ -51,9 +56,9 @@ private fun BarButton(label: String, on: Boolean, onClick: () -> Unit) {
     Box(
         Modifier.clip(Pill).background(if (on) Color.Black else Color.Transparent)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 9.dp),
+            .padding(horizontal = 11.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(label.uppercase(), fontFamily = FontFamily.SansSerif, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp, color = if (on) Color.White else Color.Black)
+        Text(label.uppercase(), fontFamily = FontFamily.SansSerif, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, color = if (on) Color.White else Color.Black)
     }
 }

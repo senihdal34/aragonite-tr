@@ -36,6 +36,7 @@ notes=$(sqlite3 "$D/app_database" "select count(*) from Page where background='i
 tags=$(sqlite3 "$D/app_database" "select count(*) from Kv where key like 'pagetags:%' and value like '%e2etest%'")
 hidden=$(sqlite3 "$D/app_database" "select count(*) from Kv where key='hiddentopics' and value like '%e2etest%'")
 rm -rf "$D"
+adb uninstall $PKG >/dev/null 2>&1 || true   # the test copy is temporary: DeusNote stays the only app
 fail=0
 check() { if [ "$2" = "$3" ]; then echo "PASS  $1 ($2)"; else echo "FAIL  $1 (got $2, expected $3)"; fail=1; fi; }
 has() { if echo "$2" | grep -q "$3"; then echo "PASS  $1"; else echo "FAIL  $1 (got: $2)"; fail=1; fi; }

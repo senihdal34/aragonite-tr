@@ -27,7 +27,7 @@ object HwrGlossaryLoader {
     )
 
     private val starterWords = listOf(
-        "Papara", "Aragonite", "Rasyonet", "Innovance", "Cronus", "Tradesoft", "Vodafone", "Turkcell",
+        "Papara", "Aragonite", "DeusNote", "Rasyonet", "Innovance", "Cronus", "Tradesoft", "Vodafone", "Turkcell",
         "Netgsm", "Mercury", "Relay", "Sofistike", "Bollinger", "BIST", "LinkedIn", "Pulse", "Startup",
         "Şirket", "Obsidian", "Syncthing", "Boox", "Windows", "Podcast", "Outsource", "Regulation",
         "Edgecase", "Deus", "Minds"

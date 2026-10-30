@@ -272,6 +272,12 @@ fun EditorView(
                             onPrevious = { goToWeek(monday.minusWeeks(1)) },
                             onThisWeek = { goToWeek(PlannerWeeks.mondayOf(LocalDate.now())) },
                             onNext = { goToWeek(monday.plusWeeks(1)) },
+                            onNotes = {
+                                navController.navigate(com.ethran.notable.ui.views.HomeDestination.route) {
+                                    popUpTo(com.ethran.notable.ui.views.HomeDestination.route) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            },
                             modifier = Modifier.align(Alignment.TopCenter)
                         )
                     }
