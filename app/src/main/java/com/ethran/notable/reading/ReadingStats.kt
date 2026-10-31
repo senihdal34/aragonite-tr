@@ -56,6 +56,12 @@ object ReadingStats {
         val readDays = msByDay.filter { it.value >= 30_000L }.keys
 
         val today = dayOf(now, zone)
+        val sortedPages = pageEvents.sortedBy { it.time }
+        val hours = hoursRead(sortedPages, now, zone)
+        val records = sessionRecords(sortedPages)
+        val pageTurns = if (sortedPages.isEmpty()) null else PageTurns(
+            sortedPages.size, sortedPages.count { dayOf(it.time, zone) == today }, sortedPages.first().time
+        )
         var streak = 0
         var cursor = if (today in readDays) today else today.minusDays(1)
         while (cursor in readDays) { streak++; cursor = cursor.minusDays(1) }
@@ -115,7 +121,44 @@ object ReadingStats {
             recentlyAdded = recent, finishedThisYear = finishedYear, streakDays = streak, weekMinutes = weekMinutes,
             weekDots = weekDots, todayIndex = today.dayOfWeek.value % 7, minutesByDay = minutesByDay,
             authorCount = rbooks.flatMap { it.authors }.distinct().size, seriesCount = rbooks.mapNotNull { it.series }.distinct().size,
-            highlight = todays, highlights = hl, booksByDay = booksByDay
+            highlight = todays, highlights = hl, booksByDay = booksByDay, hours = hours, records = records, pageTurns = pageTurns
+        )
+    }
+
+    /** A gap of more than this between two page turns ends a reading session. */
+    const val SESSION_GAP_MS = 10 * 60_000L
+    const val HOURS_DAYS = 90
+
+    /** Minutes read in each local hour (0..23) over the last [HOURS_DAYS] days. */
+    fun hoursRead(sortedPages: List<NrEvent>, now: Long, zone: ZoneId): List<Int> {
+        val ms = LongArray(24)
+        val since = now - HOURS_DAYS * 24 * 3_600_000L
+        for (e in sortedPages) {
+            if (e.time < since) continue
+            ms[Instant.ofEpochMilli(e.time).atZone(zone).hour] += e.durationMs.coerceIn(0L, PAGE_CAP_MS)
+        }
+        return ms.map { (it / 60_000L).toInt() }
+    }
+
+    /** Sessions from page turns in time order: count, longest and average length in minutes, and pages an hour. */
+    fun sessionRecords(sortedPages: List<NrEvent>): SessionRecords? {
+        if (sortedPages.isEmpty()) return null
+        val secs = ArrayList<Long>()
+        val pages = ArrayList<Int>()
+        var curMs = 0L
+        var curPages = 0
+        var last = Long.MIN_VALUE
+        fun close() { if (curPages > 0 && curMs >= 60_000L) { secs += curMs / 1000; pages += curPages } }
+        for (e in sortedPages) {
+            if (last != Long.MIN_VALUE && e.time - last > SESSION_GAP_MS) { close(); curMs = 0L; curPages = 0 }
+            curMs += e.durationMs.coerceIn(0L, PAGE_CAP_MS); curPages++; last = e.time
+        }
+        close()
+        if (secs.isEmpty()) return null
+        val total = secs.sum()
+        return SessionRecords(
+            sessions = secs.size, longestMin = Math.round(secs.max() / 60.0).toInt(), avgMin = Math.round(total / secs.size / 60.0).toInt(),
+            pagesPerHour = if (total > 0) Math.round(pages.sum() * 3600.0 / total).toInt() else 0
         )
     }
 }

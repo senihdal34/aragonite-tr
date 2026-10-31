@@ -21,6 +21,12 @@ data class RBook(
     val reading: Boolean get() = progress > 0.0 && finishedAt == null
 }
 
+/** Reading sessions: page turns grouped until a gap of more than ten minutes (sessions under a minute do not count). */
+data class SessionRecords(val sessions: Int, val longestMin: Int, val avgMin: Int, val pagesPerHour: Int)
+
+/** Every page turned, how many on the reading day of "now", and when the first one was. */
+data class PageTurns(val total: Int, val today: Int, val since: Long?)
+
 data class RHighlight(val quote: String, val book: RBook?, val time: Long)
 
 /** Everything the board draws, already computed. Built from NeoReader's data by [ReadingStats]. */
@@ -45,7 +51,11 @@ data class ReadingData(
     val highlight: RHighlight?,
     val highlights: List<RHighlight>,
     /** For each reading day (epoch day), the ids of the books read that day, most read first. */
-    val booksByDay: Map<Long, List<String>> = emptyMap()
+    val booksByDay: Map<Long, List<String>> = emptyMap(),
+    /** Minutes read in each local hour of the day over the last 90 days. */
+    val hours: List<Int> = List(24) { 0 },
+    val records: SessionRecords? = null,
+    val pageTurns: PageTurns? = null
 ) {
     val alsoReading: List<RBook> get() = continueReading.drop(1)
     val totalBooks: Int get() = books.size

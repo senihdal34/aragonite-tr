@@ -192,16 +192,20 @@ fun HomeView(
     BoxWithConstraints(Modifier.fillMaxSize().background(Paper)) {
         val landscape = maxWidth > maxHeight
         val scroll = rememberScrollState()
+        // The Reading board is a page of its own below the masthead: full width (it has its own margins) and not
+        // scrolled, so the page fits the screen as the KOReader board does.
+        val readingBoard = section == HomeSection.Reading
         Column(
-            Modifier.fillMaxSize().verticalScroll(scroll)
-                .padding(horizontal = 56.dp, vertical = 14.dp)
+            if (readingBoard) Modifier.fillMaxSize().padding(top = 14.dp)
+            else Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 56.dp, vertical = 14.dp)
         ) {
-            Masthead(state, selected, section, landscape, actions, adding, input)
-            if (section == HomeSection.Reading) {
+            if (readingBoard) Column(Modifier.padding(horizontal = 56.dp)) { Masthead(state, selected, section, landscape, actions, adding, input) }
+            else Masthead(state, selected, section, landscape, actions, adding, input)
+            if (readingBoard) {
                 val reading by readingVm.ui.collectAsState()
                 com.ethran.notable.reading.board.ReadingBoardView(
                     reading, onOpen = { book -> com.ethran.notable.reading.ReadingLauncher.open(appContext, book.path) },
-                    modifier = Modifier.padding(bottom = 24.dp), onSetGoal = readingVm::setGoal
+                    modifier = Modifier.weight(1f), onSetGoal = readingVm::setGoal, onRefresh = readingVm::refresh
                 )
             } else if (section == HomeSection.Pinned) {
                 PinnedPage(state, actions)

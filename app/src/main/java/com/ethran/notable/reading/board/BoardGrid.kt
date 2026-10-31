@@ -3,8 +3,7 @@ package com.ethran.notable.reading.board
 /**
  * Pure layout for a board page, ported from the KOReader board (lb_board_layout.lua): the grid a screen gets, the
  * dense first-fit packing of a page's boxes, and how a page fits the screen. All sizes are in dp. Nothing here
- * touches Compose, so it is unit tested. The pages in [ReadingBoardView] are still laid out by hand; this is the
- * building block for moving them onto a grid.
+ * touches Compose, so it is unit tested. The board pages are laid out with it, in device pixels ([geometryPx]).
  */
 object BoardGrid {
     const val MIN_ROW = 84
@@ -33,7 +32,10 @@ object BoardGrid {
     data class Geometry(
         val width: Int, val margin: Int, val cols: Int, val gap: Int, val colWidth: Int,
         /** Height left for the grid under the header and above the page dots. */
-        val available: Int
+        val available: Int,
+        val minRow: Int = MIN_ROW, val comfyRow: Int = COMFY_ROW, val maxRow: Int = MAX_ROW,
+        val top: Int = TOP, val headerHeight: Int = HEADER, val headerGap: Int = HEADER_GAP,
+        val footerHeight: Int = FOOTER, val footerGap: Int = FOOTER_GAP, val bottom: Int = BOTTOM
     )
 
     /** Size codes: S 1x1, M 2x1, L 2x2, W full width x1, XL full width x2. On a two-column board W is M and XL is L. */
@@ -56,6 +58,24 @@ object BoardGrid {
         widthDp >= 700 -> 24
         widthDp >= 560 -> 20
         else -> 16
+    }
+
+    /**
+     * The geometry in device pixels, as BoardLayout.geometry does: [px] converts a plugin dp to pixels, [widthDp] is the
+     * layout width at interface size 1 (it chooses the columns and the margin), the screen sizes are in pixels.
+     */
+    fun geometryPx(px: (Int) -> Int, screenWidth: Int, screenHeight: Int, widthDp: Int): Geometry {
+        val margin = px(marginFor(widthDp))
+        val width = screenWidth - 2 * margin
+        val cols = columnsFor(widthDp)
+        val gap = px(GAP)
+        val top = px(TOP); val header = px(HEADER); val headerGap = px(HEADER_GAP)
+        val footer = px(FOOTER); val footerGap = px(FOOTER_GAP); val bottom = px(BOTTOM)
+        return Geometry(
+            width, margin, cols, gap, (width - (cols - 1) * gap) / cols,
+            screenHeight - top - header - headerGap - footerGap - footer - bottom,
+            px(MIN_ROW), px(COMFY_ROW), px(MAX_ROW), top, header, headerGap, footer, footerGap, bottom
+        )
     }
 
     fun geometry(screenWidth: Int, screenHeight: Int): Geometry {
@@ -103,7 +123,7 @@ object BoardGrid {
 
     /** Height of one row when [rows] rows fill the available height exactly. */
     fun rowHeight(g: Geometry, rows: Int): Int =
-        if (rows <= 0) MAX_ROW else (g.available - (rows - 1) * g.gap) / rows
+        if (rows <= 0) g.maxRow else (g.available - (rows - 1) * g.gap) / rows
 
     /**
      * Fits one page: drops boxes from the end until rows are at least [MIN_ROW] high, then adds [extras] that cost no
@@ -113,14 +133,14 @@ object BoardGrid {
     fun fitPage(g: Geometry, base: List<Item>, extras: List<Item> = emptyList()): Packing {
         val items = base.toMutableList()
         val dropped = ArrayList<Item>()
-        while (items.size > 1 && rowHeight(g, pack(items, g.cols).rows) < MIN_ROW) dropped.add(0, items.removeAt(items.lastIndex))
+        while (items.size > 1 && rowHeight(g, pack(items, g.cols).rows) < g.minRow) dropped.add(0, items.removeAt(items.lastIndex))
         for (ex in extras) {
             val before = pack(items, g.cols)
             val after = pack(items + ex, g.cols)
-            if ((after.rows == before.rows || rowHeight(g, after.rows) >= COMFY_ROW) && after.holes <= before.holes) items += ex
+            if ((after.rows == before.rows || rowHeight(g, after.rows) >= g.comfyRow) && after.holes <= before.holes) items += ex
         }
         val packed = pack(items, g.cols)
-        val row = minOf(MAX_ROW, rowHeight(g, packed.rows))
+        val row = minOf(g.maxRow, rowHeight(g, packed.rows))
         return packed.copy(rowHeight = row, gridHeight = packed.rows * row + maxOf(0, packed.rows - 1) * g.gap, dropped = dropped)
     }
 }
