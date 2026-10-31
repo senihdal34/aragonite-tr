@@ -5,6 +5,9 @@ import com.ethran.notable.reading.MoonPhase
 import com.ethran.notable.reading.RBook
 import com.ethran.notable.reading.ReadingData
 import com.ethran.notable.reading.ReadingInsights
+import com.ethran.notable.reading.chapters.ChapterLine
+import com.ethran.notable.reading.chapters.ChapterLines
+import com.ethran.notable.reading.chapters.ChapterState
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.TextStyle
@@ -21,7 +24,11 @@ data class MonthMinutes(val month: Int, val year: Int, val minutes: Int)
  * What the board's boxes show, derived from [ReadingData] once per load: the plugin's d.* table (lb_board_data.lua).
  * Pure, so it is unit tested.
  */
-class BoardData(val data: ReadingData, val today: LocalDate, zone: ZoneId = ZoneId.systemDefault()) {
+class BoardData(
+    val data: ReadingData, val today: LocalDate, zone: ZoneId = ZoneId.systemDefault(),
+    /** What is known about the chapters of the book on top (the Next stop box). */
+    val chapters: ChapterState = ChapterState.Idle
+) {
     private val minutesByDay = data.minutesByDay
     private fun minutesOn(d: LocalDate) = minutesByDay[d.toEpochDay()] ?: 0
 
@@ -82,6 +89,14 @@ class BoardData(val data: ReadingData, val today: LocalDate, zone: ZoneId = Zone
         Forecast(book, left, floor(perDay + 0.5).toInt(), daysOut, today.plusDays(daysOut.toLong()))
     }
     val yearAgo = ReadingInsights.yearAgo(data, today)
+
+    /** The Next stop line of the book on top: its stations, where the reader is and how long to each (BoardData.chapterLine). */
+    val chapterLine: ChapterLine? = run {
+        val book = data.continueReading.firstOrNull() ?: return@run null
+        val ready = chapters as? ChapterState.Ready ?: return@run null
+        if (ready.bookId != book.id) return@run null
+        ChapterLines.forBook(ready.map, book.progress, book.pages, book.minutesLeft)
+    }
 
     /** Books started and not finished, most recently read first. */
     val pickBackUp: List<RBook> = data.continueReading

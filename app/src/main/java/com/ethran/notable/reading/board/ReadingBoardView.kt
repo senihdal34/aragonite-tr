@@ -137,7 +137,7 @@ fun ReadingBoardView(ui: ReadingUi, onOpen: (RBook) -> Unit, modifier: Modifier 
     var lastSync by remember { mutableStateOf<Long?>(null) }
     val data = ui.data
     val today = remember(data) { ReadingInsights.today(data) }
-    val bd = remember(data, today) { BoardData(data, today) }
+    val bd = remember(data, today, ui.chapters) { BoardData(data, today, chapters = ui.chapters) }
     val device = rememberDevice(data)
     val lead = rememberLeadFamily(data.continueReading.firstOrNull())
     val dm = context.resources.displayMetrics

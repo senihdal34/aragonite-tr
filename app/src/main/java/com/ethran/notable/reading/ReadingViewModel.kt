@@ -5,11 +5,15 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.ethran.notable.reading.chapters.ChapterRepository
+import com.ethran.notable.reading.chapters.ChapterState
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -18,7 +22,9 @@ data class ReadingUi(
     val data: ReadingData = ReadingData.Empty,
     val loaded: Boolean = false,
     /** False when NeoReader's library could not be read (not installed, or its data changed). */
-    val sourceAvailable: Boolean = true
+    val sourceAvailable: Boolean = true,
+    /** The chapters of the book on top of the board (the Next stop box), read from its file after the board is up. */
+    val chapters: ChapterState = ChapterState.Idle
 )
 
 @HiltViewModel
@@ -28,6 +34,9 @@ class ReadingViewModel @Inject constructor(@ApplicationContext private val conte
 
     private val _ui = MutableStateFlow(ReadingUi(ReadingData.Empty.copy(goalBooks = goal)))
     val ui: StateFlow<ReadingUi> = _ui.asStateFlow()
+
+    private val chapterRepo = ChapterRepository(File(context.filesDir, "reading-chapters"))
+    private var chaptersJob: Job? = null
 
     /** Reads NeoReader's data off the main thread; the last data stays on screen while it loads or if reading fails. */
     fun refresh() {
@@ -39,7 +48,27 @@ class ReadingViewModel @Inject constructor(@ApplicationContext private val conte
             val coverDir = COVER_DIRS.map(::File).firstOrNull { it.isDirectory }
             if (books.isEmpty() && _ui.value.loaded) return@launch   // keep what we had
             val data = ReadingStats.build(books, events, highlights, System.currentTimeMillis(), goalBooks = goal, coverDir = coverDir)
-            _ui.value = ReadingUi(data, loaded = true, sourceAvailable = books.isNotEmpty())
+            _ui.update { ReadingUi(data, loaded = true, sourceAvailable = books.isNotEmpty(), chapters = it.chapters) }
+            loadChapters(data.continueReading.firstOrNull())
+        }
+    }
+
+    /**
+     * Reads the chapters of the book on top (the board's Next stop box) from its file, off the main thread, once per book:
+     * the result is cached on disk by path, size and modification time. The board shows its quiet "looking up" text meanwhile.
+     */
+    private fun loadChapters(book: RBook?) {
+        if (book == null) { chaptersJob?.cancel(); _ui.update { it.copy(chapters = ChapterState.Idle) }; return }
+        if (_ui.value.chapters.bookIdOrNull == book.id) return          // already loaded, loading, or known to have none
+        chaptersJob?.cancel()
+        _ui.update { it.copy(chapters = ChapterState.Loading(book.id)) }
+        chaptersJob = viewModelScope.launch(Dispatchers.IO) {
+            val result = chapterRepo.load(File(book.path))
+            Log.i(TAG, "chapters for ${File(book.path).name}: " + when (result) {
+                is com.ethran.notable.reading.chapters.ChapterResult.Found -> "${result.map.entries.size} entries (${result.map.source})"
+                is com.ethran.notable.reading.chapters.ChapterResult.None -> "none, ${result.reason.short}"
+            })
+            _ui.update { if (it.chapters.bookIdOrNull == book.id) it.copy(chapters = ChapterRepository.stateOf(book.id, result)) else it }
         }
     }
 
