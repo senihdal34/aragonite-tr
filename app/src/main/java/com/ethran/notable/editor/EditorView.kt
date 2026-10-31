@@ -228,8 +228,9 @@ fun EditorView(
         }
         fun goToDay(day: LocalDate) {
             scope.launch {
-                syncPlannerPage(pageId, plannerMonday, plannerDay)
+                // Create the day page first, so a page opened for the first time also gets the week row's ink.
                 val target = withContext(Dispatchers.IO) { runCatching { plannerService.ensureDay(day) }.getOrNull() }
+                syncPlannerPage(pageId, plannerMonday, plannerDay)
                 if (target != null && target.pageId != pageId) CanvasEventBus.changePage.tryEmit(target.pageId)
             }
         }

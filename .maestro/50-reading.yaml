@@ -1,0 +1,24 @@
+appId: io.aragonite.notes
+---
+# Reading tab: the board shows greeting, streak, week, goal and shelves; the Library page and its lists open and close.
+- launchApp
+- extendedWaitUntil:
+    visible: "READING"
+    timeout: 40000
+- tapOn: "READING"
+- extendedWaitUntil:
+    visible: "Reading Board"
+    timeout: 20000
+- assertVisible: "Good .*"
+- assertVisible: "STREAK"
+- assertVisible: "THIS WEEK"
+- assertVisible: ".* GOAL"
+- tapOn: "LIBRARY"
+- assertVisible: "RECENTLY ADDED"
+- assertVisible: "AUTHORS"
+- tapOn: "AUTHORS"
+- assertVisible: "← BACK"
+- tapOn: "← BACK"
+- assertVisible: "RECENTLY ADDED"
+- tapOn: "HOME"
+- assertVisible: "STREAK"

@@ -32,6 +32,7 @@ private val guide = paint(Color.GRAY, 1.5f)
 private val box = paint(Color.BLACK, 3f, Paint.Style.STROKE)
 private val fillInk = paint(Color.BLACK)
 private val titleP = paint(Color.BLACK, size = 67f, face = serifBold).apply { letterSpacing = -0.03f }
+private val titleDayP = paint(Color.BLACK, size = 54f, face = serifBold).apply { letterSpacing = -0.03f }   // day names are long
 private val summary = paint(Color.DKGRAY, size = 23f, face = sansBold).apply { textAlign = Paint.Align.RIGHT; letterSpacing = 0.14f }
 private val summaryBold = paint(Color.BLACK, size = 30f, face = sansBold).apply { textAlign = Paint.Align.RIGHT; letterSpacing = 0.1f }
 private val subP = paint(Color.DKGRAY, size = 34f, face = sansBold).apply { textAlign = Paint.Align.RIGHT; letterSpacing = 0.08f }
@@ -81,7 +82,7 @@ private fun drawHeader(
 ) {
     // A day page has the back button (drawn by the editor) in the logo's place.
     if (withLogo) logo(context)?.let { canvas.drawBitmap(it, 0f, 26f + oy, null) }
-    canvas.drawText(title, if (withLogo) 132f else 300f, 97f + oy, titleP)
+    canvas.drawText(title, if (withLogo) 132f else 290f, 97f + oy, if (withLogo) titleP else titleDayP)
     val right = w - PlannerLayout.RIGHT_MARGIN
     canvas.drawText(line1, right, 48f + oy, summary)
     canvas.drawText(line2, right, 80f + oy, summary)
