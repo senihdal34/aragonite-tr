@@ -1,0 +1,20 @@
+appId: io.aragonite.notes
+---
+# Shared step: the other three tabs open from the Reading tab and the way back works. The weekly planner page is a
+# drawing, so its week tool ("BU HAFTA") stands for it; Notes and Favorites are text pages.
+- tapOn: "Planner"
+- extendedWaitUntil:
+    visible: "BU HAFTA"
+    timeout: 60000
+- tapOn: "Notes"
+- extendedWaitUntil:
+    visible: "Personal Notes"
+    timeout: 60000
+- tapOn: "★ Favorites"
+- extendedWaitUntil:
+    visible: "Favorite Notes"
+    timeout: 60000
+- tapOn: "Reading"
+- extendedWaitUntil:
+    visible: "Streak"
+    timeout: 60000

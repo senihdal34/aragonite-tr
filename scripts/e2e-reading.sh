@@ -86,14 +86,16 @@ screen_has() { adb shell uiautomator dump /sdcard/e2e-ui.xml >/dev/null 2>&1; ad
 
 # Maestro on this tablet sometimes hangs when its driver app is left over from the last run, so: reset the driver before
 # every run, kill a run that takes longer than $FLOW_TIMEOUT seconds, and try each flow twice.
-FLOW_TIMEOUT=${FLOW_TIMEOUT:-900}
+FLOW_TIMEOUT=${FLOW_TIMEOUT:-600}
 run_flow_once() { # name file
+  pkill -f "maestro.cli" >/dev/null 2>&1   # a Maestro left over from an earlier run makes the next one hang at its first step
   adb shell am force-stop dev.mobile.maestro >/dev/null 2>&1; adb shell am force-stop dev.mobile.maestro.test >/dev/null 2>&1
+  sleep 2
   maestro test "$2" --test-output-dir "$OUT/maestro-$1" >"$OUT/$1.log" 2>&1 &
   local pid=$! waited=0
   while kill -0 "$pid" 2>/dev/null; do
     sleep 3; waited=$((waited + 3))
-    if [ "$waited" -ge "$FLOW_TIMEOUT" ]; then pkill -P "$pid" >/dev/null 2>&1; kill "$pid" >/dev/null 2>&1; echo "(timeout after ${FLOW_TIMEOUT}s)" >>"$OUT/$1.log"; wait "$pid" 2>/dev/null; return 1; fi
+    if [ "$waited" -ge "$FLOW_TIMEOUT" ]; then pkill -P "$pid" >/dev/null 2>&1; kill "$pid" >/dev/null 2>&1; pkill -f "maestro.cli" >/dev/null 2>&1; echo "(timeout after ${FLOW_TIMEOUT}s)" >>"$OUT/$1.log"; wait "$pid" 2>/dev/null; return 1; fi
   done
   wait "$pid"
 }
@@ -158,6 +160,7 @@ print(m.group(1) if m else '')")
   if echo "$top" | grep -q "com.onyx.kreader"; then pass "$1: the hero opens NeoReader"; else fail "$1: NeoReader not on top: $top"; fi
   if [ -n "$expected" ] && [ "$shown" = "$expected" ]; then pass "$1: opens where you stopped ($shown)"; else fail "$1: expected page $expected, reader shows '$shown'"; fi
   back_to_app
+  adb shell am force-stop com.onyx.kreader >/dev/null 2>&1   # every opened book leaves a 120 MB reader process; they starve the tablet and Maestro stalls
   # a dust-box Open (Decor page) opens NeoReader too, when the library has a never-opened book
   tap_label "Reading" >/dev/null; sleep 2
   tap_label "Page Decor" >/dev/null; sleep 2
@@ -167,6 +170,7 @@ print(m.group(1) if m else '')")
     tap_label "Open book"; sleep 6
     if focus | grep -q "com.onyx.kreader"; then pass "$1: the dust box Open opens NeoReader"; else fail "$1: dust Open did not open NeoReader: $(focus)"; fi
     back_to_app
+    adb shell am force-stop com.onyx.kreader >/dev/null 2>&1
   else
     echo "SKIP  $1: no never-opened book, so no dust Open button"
   fi
@@ -194,6 +198,8 @@ adb shell settings put system accelerometer_rotation 0
 adb shell settings put system user_rotation 0
 sleep 3
 
+PHASES=${E2E_PHASES:-"portrait landscape"}   # e.g. E2E_PHASES=landscape
+if echo "$PHASES" | grep -qw portrait; then
 echo "=== PORTRAIT ==="
 run_flow portrait .maestro/50-reading.yaml
 run_flow controls-portrait .maestro/52-reading-controls.yaml
@@ -202,16 +208,29 @@ check_goal_is_15
 check_toggles portrait
 check_open_book portrait
 adb exec-out screencap -p > "$OUT/portrait-end.png" 2>/dev/null
+fi
 
+if echo "$PHASES" | grep -qw landscape; then
 echo "=== LANDSCAPE ==="
+adb shell settings put system accelerometer_rotation 0   # auto-rotate would ignore user_rotation
 adb shell settings put system user_rotation 1
 sleep 5
+adb shell wm size | head -1 >/dev/null
+# a wrong orientation would test the wrong layout: the screenshot must be wider than tall
+adb exec-out screencap -p > "$OUT/landscape-start.png" 2>/dev/null
+python3 - "$OUT/landscape-start.png" <<'PY' || { fail "the tablet did not rotate to landscape"; }
+import struct, sys
+d = open(sys.argv[1], "rb").read(32)
+w, h = struct.unpack(">II", d[16:24])
+sys.exit(0 if w > h else 1)
+PY
 run_flow landscape .maestro/51-reading-landscape.yaml
 run_flow controls-landscape .maestro/55-reading-landscape-controls.yaml
 run_flow goal-landscape .maestro/53-reading-goal.yaml
 check_goal_is_15
 check_toggles landscape
 check_open_book landscape
+fi
 
 restore_rotation
 sleep 3
