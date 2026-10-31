@@ -138,18 +138,19 @@ fun HeroWidget(c: BoardCtx, w: Int, hh: Int) {
     }
 }
 
-/** The white Resume pill: play icon, label, 40 dp high. */
+/** The Resume pill: play icon, label, 40 dp high. White on the dark hero tile, black on a white page ([dark]). */
 @Composable
-fun PillButton(label: String, icon: String, onClick: () -> Unit) {
+fun PillButton(label: String, icon: String, dark: Boolean = false, onClick: () -> Unit) {
     val bx = LocalBx.current
+    val fg = if (dark) Ink.white else Ink.black
     Row(
-        Modifier.height(bx.dd(40)).clip(RoundedCornerShape(bx.dd(20))).background(Ink.white).tapOrHold(onClick),
+        Modifier.height(bx.dd(40)).clip(RoundedCornerShape(bx.dd(20))).background(if (dark) Ink.black else Ink.white).tapOrHold(onClick),
         verticalAlignment = Alignment.CenterVertically
     ) {
         HGap(bx.px(13))
-        Ic(icon, 14, Ink.black, 2.25f, fill = true)
+        Ic(icon, 14, fg, 2.25f, fill = true)
         HGap(bx.px(8))
-        BText(label, 14.0, bold = true)
+        BText(label, 14.0, bold = true, color = fg)
         HGap(bx.px(16))
     }
 }

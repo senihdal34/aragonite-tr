@@ -29,11 +29,11 @@ cat > /tmp/open-book.yaml <<'YAML'
 appId: io.aragonite.notes
 ---
 - launchApp
-- tapOn: "READING"
+- tapOn: "Reading"
 - extendedWaitUntil:
-    visible: "STREAK"
+    visible: "Streak"
     timeout: 20000
-- tapOn: "CONTINUE|OPEN"
+- tapOn: "Resume|Resume reading|Shuffle"
 YAML
 maestro test /tmp/open-book.yaml
 sleep 8

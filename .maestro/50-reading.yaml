@@ -1,24 +1,37 @@
 appId: io.aragonite.notes
 ---
-# Reading tab: the board shows greeting, streak, week, goal and shelves; the Library page and its lists open and close.
+# Reading tab: the board is a port of the KOReader board. Greeting, the Home boxes, the four pages and the lists behind
+# the link boxes open and close.
 - launchApp
 - extendedWaitUntil:
-    visible: "READING"
+    visible: "Reading"
     timeout: 40000
-- tapOn: "READING"
+- tapOn: "Reading"
 - extendedWaitUntil:
     visible: "Reading Board"
     timeout: 20000
 - assertVisible: "Good .*"
-- assertVisible: "STREAK"
-- assertVisible: "THIS WEEK"
-- assertVisible: ".* GOAL"
-- tapOn: "LIBRARY"
-- assertVisible: "RECENTLY ADDED"
-- assertVisible: "AUTHORS"
-- tapOn: "AUTHORS"
-- assertVisible: "← BACK"
-- tapOn: "← BACK"
-- assertVisible: "RECENTLY ADDED"
-- tapOn: "HOME"
-- assertVisible: "STREAK"
+- assertVisible: "Streak"
+- assertVisible: "This week"
+- assertVisible: ".* goal"
+- assertVisible: "Home"
+# Home -> Insights -> Library -> Decor with the page chevron
+- tapOn: "Next page"
+- assertVisible: "Insights"
+- assertVisible: "Year in reading"
+- tapOn: "Next page"
+- assertVisible: "Library"
+- assertVisible: "Pick back up"
+- assertVisible: "Search"
+- tapOn: "Next page"
+- assertVisible: "Decor"
+- assertVisible: "Pages turned"
+- tapOn: "Previous page"
+- tapOn: "Previous page"
+- tapOn: "Previous page"
+# a link box opens its list and the back arrow returns
+- assertVisible: "Authors"
+- tapOn: "Authors"
+- assertVisible: "Back"
+- tapOn: "Back"
+- assertVisible: "Streak"

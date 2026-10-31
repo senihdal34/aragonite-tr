@@ -40,9 +40,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.ethran.notable.reading.RBook
 import com.ethran.notable.reading.ReadingGoal
 import com.ethran.notable.reading.ReadingInsights
@@ -312,8 +315,8 @@ private fun BoardHeader(w: Int, d: Device, c: BoardCtx, onSearch: () -> Unit, on
         }
         StatusCluster(d)
         HGap(bx.px(6))
-        Box(Modifier.size(bx.d(box)).tapOrHold(onSearch), contentAlignment = Alignment.Center) { Ic("search", 23, Ink.black, 2f) }
-        Box(Modifier.size(bx.d(box)).tapOrHold(onMenu), contentAlignment = Alignment.Center) { Ic("menu", 23, Ink.black, 2f) }
+        Box(Modifier.size(bx.d(box)).semantics { contentDescription = "Search books" }.tapOrHold(onSearch), contentAlignment = Alignment.Center) { Ic("search", 23, Ink.black, 2f) }
+        Box(Modifier.size(bx.d(box)).semantics { contentDescription = "Reading goal" }.tapOrHold(onMenu), contentAlignment = Alignment.Center) { Ic("menu", 23, Ink.black, 2f) }
     }
 }
 
@@ -321,7 +324,10 @@ private fun BoardHeader(w: Int, d: Device, c: BoardCtx, onSearch: () -> Unit, on
 private fun BoardFooter(w: Int, h: Int, names: List<String>, page: Int, onPage: (Int) -> Unit) {
     val bx = LocalBx.current
     @Composable fun chev(name: String, enabled: Boolean, to: Int) {
-        Box(Modifier.size(bx.d(bx.px(44)), bx.d(h)).tapOrHold({ if (enabled) onPage(to) }), contentAlignment = Alignment.Center) { Ic(name, 20, if (enabled) Ink.black else Ink.gb, 2.5f) }
+        Box(
+            Modifier.size(bx.d(bx.px(44)), bx.d(h)).semantics { contentDescription = if (to > page) "Next page" else "Previous page" }.tapOrHold({ if (enabled) onPage(to) }),
+            contentAlignment = Alignment.Center
+        ) { Ic(name, 20, if (enabled) Ink.black else Ink.gb, 2.5f) }
     }
     Row(Modifier.width(bx.d(w)).height(bx.d(h)), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
         chev("chevron-left", page > 0, page - 1)
@@ -341,7 +347,7 @@ private fun BoardFooter(w: Int, h: Int, names: List<String>, page: Int, onPage: 
 private fun ScreenTitle(title: String, onBack: () -> Unit, right: (@Composable () -> Unit)? = null) {
     val bx = LocalBx.current
     Row(Modifier.fillMaxWidth().height(bx.dd(48)), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(bx.dd(44)).tapOrHold(onBack), contentAlignment = Alignment.CenterStart) { Ic("chevron-left", 24, Ink.black, 2.5f) }
+        Box(Modifier.size(bx.dd(44)).semantics { contentDescription = "Back" }.tapOrHold(onBack), contentAlignment = Alignment.CenterStart) { Ic("chevron-left", 24, Ink.black, 2.5f) }
         Box(Modifier.weight(1f)) { BText(title, 22.0, bold = true) }
         right?.invoke()
     }
@@ -391,6 +397,8 @@ private fun SubList(sub: Sub, shelfKind: String, bd: BoardData, c: BoardCtx, bac
 private fun SearchScreen(query: String, onQuery: (String) -> Unit, books: List<RBook>, c: BoardCtx, back: () -> Unit) {
     val bx = LocalBx.current
     ScreenTitle("Search", back)
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     val shape = RoundedCornerShape(bx.dd(22))
     Row(
         Modifier.fillMaxWidth().height(bx.dd(44)).clip(shape).border(bx.d(max(1, bx.px(1.25))), Ink.g6, shape).padding(horizontal = bx.dd(12)),
@@ -402,7 +410,7 @@ private fun SearchScreen(query: String, onQuery: (String) -> Unit, books: List<R
             if (query.isEmpty()) BText("Title, author or series", 14.0, color = Ink.g4)
             androidx.compose.foundation.text.BasicTextField(
                 value = query, onValueChange = onQuery, singleLine = true, textStyle = boardStyle(bx, 14.0),
-                cursorBrush = androidx.compose.ui.graphics.SolidColor(Ink.black), modifier = Modifier.fillMaxWidth()
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(Ink.black), modifier = Modifier.fillMaxWidth().focusRequester(focus)
             )
         }
         if (query.isNotEmpty()) Box(Modifier.tapOrHold({ onQuery("") })) { Ic("x", 16, Ink.black, 2.5f) }
@@ -458,7 +466,7 @@ private fun BookDetailScreen(book: RBook, highlights: List<com.ethran.notable.re
             Fact("Last read", ReadingText.lastRead(book.lastReadAt, c.d.data.now.takeIf { it > 0L } ?: System.currentTimeMillis()))
             Fact("Time left", book.minutesLeft?.let { BoardData.duration(it) } ?: if (book.finishedAt != null) "Done" else "–")
             Flex()
-            Row { PillButton("Open in NeoReader", "book-open") { c.onOpen(book) } }
+            Row { PillButton("Open in NeoReader", "book-open", dark = true) { c.onOpen(book) } }
         }
     }
     VGap(bx.px(16))
