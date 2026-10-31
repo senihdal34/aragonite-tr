@@ -18,11 +18,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.util.Locale
 
 enum class MainTab { Week, Notes, Pinned, Reading }
 
-/** The PLANNER | NOTES | ★ FAVORITES | READING bar. The same bar sits under the header on Home and on the planner pages. */
+/** The Planner | Notes | ★ Favorites | Reading bar (title case). The same bar sits under the header on Home and on the planner pages. */
 @Composable
 fun MainTabs(active: MainTab?, onWeek: () -> Unit, onNotes: () -> Unit, onPinned: () -> Unit, onReading: () -> Unit, modifier: Modifier = Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -42,8 +41,8 @@ private fun Tab(label: String, on: Boolean, last: Boolean, onClick: () -> Unit) 
         contentAlignment = Alignment.Center
     ) {
         Text(
-            label.uppercase(Locale("tr", "TR")), fontFamily = FontFamily.SansSerif, fontSize = 20.sp, fontWeight = FontWeight.SemiBold,
-            letterSpacing = 2.8.sp, color = if (on) Color.White else Color(0xFF111111)
+            label, fontFamily = FontFamily.SansSerif, fontSize = 22.sp, fontWeight = FontWeight.SemiBold,
+            letterSpacing = 0.4.sp, color = if (on) Color.White else Color(0xFF111111)
         )
     }
     if (!last && !on) Box(Modifier.width(1.5.dp).height(26.dp).background(Color(0xFF999999)))

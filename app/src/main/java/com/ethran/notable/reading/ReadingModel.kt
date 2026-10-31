@@ -42,8 +42,10 @@ data class ReadingData(
     val streakDays: Int,
     /** Minutes read on each of the last 7 days, oldest first; the last entry is today. */
     val weekMinutes: List<Int>,
-    /** Days of the current week (Sunday first) on which something was read. */
+    /** Whether anything was read on each of those 7 days. */
     val weekDots: List<Boolean>,
+    /** The dates of [weekMinutes] and [weekDots], oldest first; the last one is today. */
+    val weekDates: List<java.time.LocalDate>,
     val todayIndex: Int,
     val minutesByDay: Map<Long, Int>,
     val authorCount: Int,
@@ -65,7 +67,7 @@ data class ReadingData(
         val Empty = ReadingData(
             now = 0L, name = "", goalBooks = 15, books = emptyList(), continueReading = emptyList(), discover = emptyList(),
             recentlyAdded = emptyList(), finishedThisYear = emptyList(), streakDays = 0, weekMinutes = List(7) { 0 },
-            weekDots = List(7) { false }, todayIndex = 0, minutesByDay = emptyMap(), authorCount = 0, seriesCount = 0,
+            weekDots = List(7) { false }, weekDates = emptyList(), todayIndex = 6, minutesByDay = emptyMap(), authorCount = 0, seriesCount = 0,
             highlight = null, highlights = emptyList()
         )
     }

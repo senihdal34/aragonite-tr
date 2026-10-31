@@ -362,10 +362,11 @@ fun EditorView(
                             with(density) {
                                 // Check boxes: a tap ticks the line (struck through, shared with that day's page).
                                 for (i in 0 until 7) for (k in 1..layout.lines) {
+                                    val zone = com.ethran.notable.planner.PlannerLayout.boxZone(layout.rowTop(i), k, layout.step)
                                     Box(
                                         Modifier
-                                            .offset((com.ethran.notable.planner.PlannerLayout.LABEL_W + 8f).toDp(), (layout.rowTop(i) + (k - 1) * layout.step).toDp())
-                                            .size(110f.toDp(), layout.step.toDp())
+                                            .offset(zone.x.toDp(), zone.y.toDp())
+                                            .size(zone.w.toDp(), zone.h.toDp())
                                             .clickable(
                                                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                                                 indication = null
@@ -401,10 +402,11 @@ fun EditorView(
                             val lines = com.ethran.notable.planner.PlannerLayout.dayLines(heightPx)
                             with(density) {
                                 for (k in 1..lines) {
+                                    val zone = com.ethran.notable.planner.PlannerLayout.boxZone(com.ethran.notable.planner.PlannerLayout.ROWS_TOP, k, layout.step)
                                     Box(
                                         Modifier
-                                            .offset((com.ethran.notable.planner.PlannerLayout.LABEL_W + 8f).toDp(), (com.ethran.notable.planner.PlannerLayout.ROWS_TOP + (k - 1) * layout.step).toDp())
-                                            .size(110f.toDp(), layout.step.toDp())
+                                            .offset(zone.x.toDp(), zone.y.toDp())
+                                            .size(zone.w.toDp(), zone.h.toDp())
                                             .clickable(
                                                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                                                 indication = null

@@ -11,8 +11,8 @@ import java.util.Random
 object ReadingStats {
     /** A page left open for hours is not reading: one page counts for at most this long. */
     const val PAGE_CAP_MS = 3 * 60_000L
-    /** The reading day starts at 04:00, so a late night session stays on one day. */
-    const val DAY_START_HOUR = 4
+    /** The reading day starts at local midnight, as in the plugin (lb_local_data.lua dateKey). */
+    const val DAY_START_HOUR = 0
     const val FINISHED_AT = 99.0
 
     fun dayOf(timeMs: Long, zone: ZoneId): LocalDate =
@@ -52,8 +52,9 @@ object ReadingStats {
         val booksByDay = msByDayBook.entries.associate { (d, perBook) ->
             d.toEpochDay() to perBook.entries.sortedByDescending { it.value }.map { it.key }
         }
-        for ((d, ms) in msByDay) minutesByDay[d.toEpochDay()] = (ms / 60_000L).toInt()
-        val readDays = msByDay.filter { it.value >= 30_000L }.keys
+        // A day with any reading shows at least one minute, so "read" means the same in the bars, the dots and the streak.
+        for ((d, ms) in msByDay) minutesByDay[d.toEpochDay()] = if (ms > 0L) ((ms + 30_000L) / 60_000L).toInt().coerceAtLeast(1) else 0
+        val readDays = msByDay.filter { it.value > 0L }.keys
 
         val today = dayOf(now, zone)
         val sortedPages = pageEvents.sortedBy { it.time }
@@ -66,11 +67,10 @@ object ReadingStats {
         var cursor = if (today in readDays) today else today.minusDays(1)
         while (cursor in readDays) { streak++; cursor = cursor.minusDays(1) }
 
-        // Sunday-first week, as the board draws it: S M T W T F S.
-        val sunday = today.minusDays((today.dayOfWeek.value % 7).toLong())
-        val weekDays = (0..6).map { sunday.plusDays(it.toLong()) }
-        val weekDots = weekDays.map { it in readDays }
-        val weekMinutes = weekDays.map { if (it > today) 0 else minutesByDay[it.toEpochDay()] ?: 0 }
+        // The week box is the last seven days, oldest first, today last (lb_board_data.lua: week[i] = heatmap[today - 7 + i]).
+        val weekDates = (6 downTo 0).map { today.minusDays(it.toLong()) }
+        val weekDots = weekDates.map { it in readDays }
+        val weekMinutes = weekDates.map { minutesByDay[it.toEpochDay()] ?: 0 }
 
         // Per book: last read time, progress snapshot, average seconds per page.
         val lastRead = HashMap<String, Long>()
@@ -119,7 +119,7 @@ object ReadingStats {
         return ReadingData(
             now = now, name = name, goalBooks = goalBooks, books = rbooks, continueReading = reading, discover = discover,
             recentlyAdded = recent, finishedThisYear = finishedYear, streakDays = streak, weekMinutes = weekMinutes,
-            weekDots = weekDots, todayIndex = today.dayOfWeek.value % 7, minutesByDay = minutesByDay,
+            weekDots = weekDots, weekDates = weekDates, todayIndex = 6, minutesByDay = minutesByDay,
             authorCount = rbooks.flatMap { it.authors }.distinct().size, seriesCount = rbooks.mapNotNull { it.series }.distinct().size,
             highlight = todays, highlights = hl, booksByDay = booksByDay, hours = hours, records = records, pageTurns = pageTurns
         )

@@ -28,10 +28,27 @@ class ReadingStatsTest {
         assertEquals(0, run(ev, ms(2026, 11, 2, 9)).streakDays)
     }
 
-    @Test fun lateNightReadingBelongsToThePreviousDay() {
-        val ev = listOf(open, page(ms(2026, 10, 31, 1, 30), 120))
+    @Test fun theDayStartsAtMidnightLikeThePlugin() {
+        val ev = listOf(open, page(ms(2026, 10, 31, 0, 30), 120))
         val d = run(ev, ms(2026, 10, 31, 3, 0))
         assertEquals(1, d.streakDays)
+        assertTrue(d.weekDots.last())              // 00:30 is already today
+    }
+
+    @Test fun aSingleShortPageCountsAsAReadingDay() {
+        val ev = listOf(open, page(ms(2026, 10, 31, 9), 4))
+        val d = run(ev, ms(2026, 10, 31, 15))
+        assertEquals(1, d.streakDays)
+        assertEquals(1, d.weekMinutes.last())      // shown as at least one minute, like the dots
+    }
+
+    @Test fun weekIsTheLastSevenDaysEndingToday() {
+        val ev = listOf(open, page(ms(2026, 10, 27), 600), page(ms(2026, 10, 31), 300))
+        val d = run(ev, ms(2026, 10, 31, 15))
+        assertEquals((0..6).map { java.time.LocalDate.of(2026, 10, 25).plusDays(it.toLong()) }, d.weekDates)
+        assertEquals(listOf(0, 0, 3, 0, 0, 0, 3), d.weekMinutes)     // 25..31 Oct, today last; a page counts 3 min at most (idle cap)
+        assertEquals(listOf(false, false, true, false, false, false, true), d.weekDots)
+        assertEquals(6, d.todayIndex)
     }
 
     @Test fun anIdlePageIsCapped() {

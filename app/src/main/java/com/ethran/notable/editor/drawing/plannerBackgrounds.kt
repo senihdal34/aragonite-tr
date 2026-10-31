@@ -59,7 +59,7 @@ private fun drawDayLines(canvas: Canvas, y0: Float, lines: Int, step: Float, w: 
     for (k in 1..lines) {
         val ly = y0 + k * step
         val isDone = k in done
-        checkbox(canvas, x, ly - step * 0.2f, step * 0.46f, isDone)
+        checkbox(canvas, x, PlannerLayout.boxBottom(y0, k, step), PlannerLayout.boxSize(step), isDone)
         if (isDone) canvas.drawLine(x + step * 0.46f + 14f, ly - step * 0.38f, w - 60f, ly - step * 0.38f, strike)
         if (k < lines || lastLineDrawn) canvas.drawLine(x, ly, w - 40f, ly, guide)
     }

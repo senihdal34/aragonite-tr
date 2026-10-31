@@ -166,9 +166,9 @@ class ReadingInsightsTest {
     }
 
     @Test fun finishedTodayLooksAtTheReadingDay() {
-        val books = listOf(book("a", finishedAt = ms(2026, 10, 31, 1)))   // 01:00 belongs to 30 Oct
-        assertTrue(ReadingInsights.finishedToday(books, ms(2026, 10, 30, 20), zone))
-        assertFalse(ReadingInsights.finishedToday(books, ms(2026, 10, 31, 20), zone))
+        val books = listOf(book("a", finishedAt = ms(2026, 10, 31, 1)))   // the reading day starts at midnight: 01:00 is 31 Oct
+        assertFalse(ReadingInsights.finishedToday(books, ms(2026, 10, 30, 20), zone))
+        assertTrue(ReadingInsights.finishedToday(books, ms(2026, 10, 31, 20), zone))
     }
 
     @Test fun buildRecordsWhichBooksWereReadOnWhichDay() {

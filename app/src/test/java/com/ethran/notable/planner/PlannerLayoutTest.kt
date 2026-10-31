@@ -31,4 +31,14 @@ class PlannerLayoutTest {
         assertTrue(PlannerLayout.dayLines(2480f) >= 20)
         assertTrue(PlannerLayout.dayLines(1860f) >= 8)
     }
+
+    @Test fun `tick zone is the check box with a thin margin, not the writing line`() {
+        val w = PlannerLayout.week(2480f)
+        val zone = PlannerLayout.boxZone(w.rowTop(2), 3, w.step)
+        val size = PlannerLayout.boxSize(w.step)
+        assertTrue(zone.x <= PlannerLayout.BOX_X && zone.x + zone.w >= PlannerLayout.BOX_X + size)
+        assertTrue("handwriting must not tick", zone.x + zone.w < PlannerLayout.BOX_X + size + 20f)
+        val bottom = PlannerLayout.boxBottom(w.rowTop(2), 3, w.step)
+        assertTrue(zone.y <= bottom - size && zone.y + zone.h >= bottom)
+    }
 }
