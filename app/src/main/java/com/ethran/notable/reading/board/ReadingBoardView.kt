@@ -135,6 +135,7 @@ fun ReadingBoardView(ui: ReadingUi, onOpen: (RBook) -> Unit, modifier: Modifier 
     var detailId by remember { mutableStateOf<String?>(null) }
     var searching by remember { mutableStateOf(false) }
     var goalOpen by remember { mutableStateOf(false) }
+    var badgesOpen by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var lastSync by remember { mutableStateOf<Long?>(null) }
     val data = ui.data
@@ -167,7 +168,8 @@ fun ReadingBoardView(ui: ReadingUi, onOpen: (RBook) -> Unit, modifier: Modifier 
                 "sync" -> onRefresh()
             }
         },
-        onShuffle = { shuffle++ }, dustSkip = dustSkip, onDustNext = { dustSkip++ }
+        onShuffle = { shuffle++ }, dustSkip = dustSkip, onDustNext = { dustSkip++ },
+        badges = ui.badges, onBadges = { badgesOpen = true }
     )
 
     BoxWithConstraints(modifier.fillMaxSize()) {
@@ -186,6 +188,7 @@ fun ReadingBoardView(ui: ReadingUi, onOpen: (RBook) -> Unit, modifier: Modifier 
                     detail != null -> Scrolling(g, heightPx) {
                         BookDetailScreen(detail, data.highlights.filter { it.book?.id == detail.id }, ctx) { detailId = null }
                     }
+                    badgesOpen -> Scrolling(g, heightPx) { BadgeListScreen(ui.badges, ctx.nowMs, java.time.ZoneId.systemDefault()) { badgesOpen = false } }
                     goalOpen -> Scrolling(g, heightPx) { GoalScreen(data.goalBooks, bd.finishedYear, today.year, onSetGoal) { goalOpen = false } }
                     searching -> Scrolling(g, heightPx) { SearchScreen(query, { query = it }, data.books, ctx) { searching = false; query = "" } }
                     sub != null -> Scrolling(g, heightPx) { SubList(sub!!, shelfKind, bd, ctx) { sub = null } }
@@ -242,6 +245,7 @@ private fun TileView(c: BoardCtx, tile: Tile, w: Int, h: Int, cols: Int) {
     val tap = when (tile.type) {
         "link" -> { { c.onLink(tile.kind ?: "") } }
         "sync" -> c.onSync
+        "badge" -> c.onBadges
         "hero" -> lead?.let { b -> { c.onOpen(b) } }
         else -> null
     }
@@ -351,7 +355,7 @@ private fun BoardFooter(w: Int, h: Int, names: List<String>, page: Int, onPage: 
 
 // ================================================================ screens behind the boxes
 @Composable
-private fun ScreenTitle(title: String, onBack: () -> Unit, right: (@Composable () -> Unit)? = null) {
+internal fun ScreenTitle(title: String, onBack: () -> Unit, right: (@Composable () -> Unit)? = null) {
     val bx = LocalBx.current
     Row(Modifier.fillMaxWidth().height(bx.dd(48)), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(bx.dd(44)).semantics { contentDescription = "Back" }.tapOrHold(onBack), contentAlignment = Alignment.CenterStart) { Ic("chevron-left", 24, Ink.black, 2.5f) }

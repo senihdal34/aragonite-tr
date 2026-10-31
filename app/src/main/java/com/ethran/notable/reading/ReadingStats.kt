@@ -121,7 +121,8 @@ object ReadingStats {
             recentlyAdded = recent, finishedThisYear = finishedYear, streakDays = streak, weekMinutes = weekMinutes,
             weekDots = weekDots, weekDates = weekDates, todayIndex = 6, minutesByDay = minutesByDay,
             authorCount = rbooks.flatMap { it.authors }.distinct().size, seriesCount = rbooks.mapNotNull { it.series }.distinct().size,
-            highlight = todays, highlights = hl, booksByDay = booksByDay, hours = hours, records = records, pageTurns = pageTurns
+            highlight = todays, highlights = hl, booksByDay = booksByDay, hours = hours, records = records, pageTurns = pageTurns,
+            pagesByDay = sortedPages.groupingBy { dayOf(it.time, zone).toEpochDay() }.eachCount()
         )
     }
 
@@ -158,7 +159,8 @@ object ReadingStats {
         val total = secs.sum()
         return SessionRecords(
             sessions = secs.size, longestMin = Math.round(secs.max() / 60.0).toInt(), avgMin = Math.round(total / secs.size / 60.0).toInt(),
-            pagesPerHour = if (total > 0) Math.round(pages.sum() * 3600.0 / total).toInt() else 0
+            pagesPerHour = if (total > 0) Math.round(pages.sum() * 3600.0 / total).toInt() else 0,
+            maxPages = pages.max()
         )
     }
 }

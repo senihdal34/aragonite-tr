@@ -46,7 +46,9 @@ class BoardCtx(
     val onOpen: (RBook) -> Unit, val onInfo: (RBook) -> Unit, val onLink: (String) -> Unit, val onSync: () -> Unit,
     val onToggle: (String) -> Unit, val onShuffle: () -> Unit,
     /** The step the Gathering dust box is past today's book (its next arrow). */
-    val dustSkip: Int = 0, val onDustNext: () -> Unit = {}
+    val dustSkip: Int = 0, val onDustNext: () -> Unit = {},
+    /** The badges worked out from the reading (null until the reading has loaded) and the tap that opens the list of them. */
+    val badges: com.ethran.notable.reading.badges.BadgeBoard? = null, val onBadges: () -> Unit = {}
 )
 
 @Composable internal fun ColumnScope.Flex() = Spacer(Modifier.weight(1f))

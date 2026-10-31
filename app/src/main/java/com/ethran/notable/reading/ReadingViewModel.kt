@@ -11,6 +11,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.ethran.notable.reading.badges.BadgeBoard
+import com.ethran.notable.reading.badges.BadgeEngine
+import com.ethran.notable.reading.badges.BadgeFacts
+import com.ethran.notable.reading.badges.PrefsBadgeStore
 import java.io.File
 import javax.inject.Inject
 
@@ -18,7 +22,9 @@ data class ReadingUi(
     val data: ReadingData = ReadingData.Empty,
     val loaded: Boolean = false,
     /** False when NeoReader's library could not be read (not installed, or its data changed). */
-    val sourceAvailable: Boolean = true
+    val sourceAvailable: Boolean = true,
+    /** The badges for this reading (null until there is a reading log to work them out from). */
+    val badges: BadgeBoard? = null
 )
 
 @HiltViewModel
@@ -40,7 +46,12 @@ class ReadingViewModel @Inject constructor(@ApplicationContext private val conte
             val coverDir = COVER_DIRS.map(::File).firstOrNull { it.isDirectory }
             if (books.isEmpty() && _ui.value.loaded) return@launch   // keep what we had
             val data = ReadingStats.build(books, events, highlights, System.currentTimeMillis(), goalBooks = goal, coverDir = coverDir)
-            _ui.value = ReadingUi(data, loaded = true, sourceAvailable = books.isNotEmpty())
+            // Badges need the reading log as well as the library: without it the store would be filled from half the data.
+            val badges = if (books.isNotEmpty() && events.isNotEmpty()) {
+                runCatching { BadgeEngine.evaluate(BadgeFacts.from(data, ReadingInsights.today(data)), PrefsBadgeStore(prefs), data.now) }
+                    .onFailure { Log.w(TAG, "badges failed: ${it.javaClass.simpleName}: ${it.message}") }.getOrNull()
+            } else null
+            _ui.value = ReadingUi(data, loaded = true, sourceAvailable = books.isNotEmpty(), badges = badges ?: _ui.value.badges)
         }
     }
 
