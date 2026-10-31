@@ -1,0 +1,16 @@
+appId: io.aragonite.notes
+---
+# Shared step: bring the app to the front (no restart: the Home list renders thumbnails in the background after a start,
+# which makes the screen reads slow), open the Reading tab and land on the Home page of the board.
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: "Reading"
+    timeout: 120000
+- tapOn: "Reading"
+- extendedWaitUntil:
+    visible: "Streak"
+    timeout: 60000
+- tapOn: "Page Home"
+- assertVisible: "Good .*"
+- assertVisible: "Streak"

@@ -1,0 +1,22 @@
+appId: io.aragonite.notes
+---
+# Reading tab, LANDSCAPE: the controls and the screens behind the boxes (see 52 for portrait). Run it through
+# scripts/e2e-reading.sh, which rotates the tablet first and always puts the rotation back.
+- runFlow: lib/open-reading.yaml
+- tapOn: "Toggle Sync"
+- assertVisible: "Streak"
+- tapOn: "Shuffle picks"
+- assertVisible: "Discover"
+- runFlow: lib/lists.yaml
+- tapOn: "Collections"
+- assertVisible: "Back"
+- tapOn: "Back"
+- tapOn: "Finished"
+- assertVisible: "Back"
+- tapOn: "Back"
+- assertVisible: "Streak"
+- runFlow: lib/search-and-detail.yaml
+- tapOn: "Reading goal"
+- assertVisible: "[0-9]+ goal"
+- tapOn: "Back"
+- assertVisible: "Streak"

@@ -1,0 +1,19 @@
+appId: io.aragonite.notes
+onFlowComplete:
+  - runFlow: lib/restore-goal.yaml
+---
+# Yearly goal: the menu opens the goal screen, + and - change it, the board shows the new number. onFlowComplete puts it
+# back to 15 even when a step fails.
+- runFlow: lib/open-reading.yaml
+- tapOn: "Reading goal"
+- assertVisible: "[0-9]+ goal"
+- assertVisible: ".* of 15 books finished"
+- tapOn: "More books"
+- assertVisible: ".* of 16 books finished"
+- tapOn: "Back"
+- assertVisible: ".* of 16"
+- tapOn: "Reading goal"
+- tapOn: "Fewer books"
+- assertVisible: ".* of 15 books finished"
+- tapOn: "Back"
+- assertVisible: ".* of 15"

@@ -1,0 +1,20 @@
+appId: io.aragonite.notes
+---
+# Reading tab, PORTRAIT: the controls and the screens behind the boxes: Sync, Discover shuffle, "All N", "See all", the
+# link boxes, the dust box, search, book detail. (Needs "Wall Street" in the NeoReader library: the owner's real library.)
+- runFlow: lib/open-reading.yaml
+- tapOn: "Toggle Sync"
+- assertVisible: "Streak"
+- tapOn: "Shuffle picks"
+- assertVisible: "Discover"
+- runFlow: lib/lists.yaml
+- tapOn: "Page Decor"
+- runFlow:
+    when:
+      visible: "Next dusty book"
+    commands:
+      - assertVisible: "Open"
+      - tapOn: "Next dusty book"
+      - assertVisible: "Gathering dust"
+- tapOn: "Page Home"
+- runFlow: lib/search-and-detail.yaml

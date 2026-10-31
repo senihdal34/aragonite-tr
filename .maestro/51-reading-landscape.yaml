@@ -1,0 +1,65 @@
+appId: io.aragonite.notes
+---
+# Reading tab, LANDSCAPE (6 columns, the plugin's wide layout). The tablet must already be rotated: run it through
+# scripts/e2e-reading.sh, which rotates with adb and always puts the rotation back. Planner, Notes and Favorites are
+# checked for being usable too.
+- runFlow: lib/open-reading.yaml
+# Home: the six link boxes of the wide layout (portrait has four), the hero and the rest
+- assertVisible: "This week"
+- assertVisible: ".* goal"
+- assertVisible: "Also reading"
+- assertVisible: "Discover"
+- assertVisible: "Recently added"
+- assertVisible: "Collections"
+- assertVisible: "Finished"
+- assertVisible: "On device"
+- assertVisible: "Highlight of the day|Your highlights.*"
+- assertVisible: "Resume|Resume reading|Start reading"
+# Insights
+- tapOn: "Next page"
+- assertVisible: "Year in reading"
+- assertVisible: "Reading records"
+- assertVisible: "When you read"
+- assertVisible: "Word of the day"
+- assertVisible: "A year ago"
+- assertVisible: "Finish.*"
+- assertVisible: "Finished in .*"
+# Library
+- tapOn: "Next page"
+- assertVisible: "Pick back up"
+- assertVisible: "Up next in series"
+- assertVisible: "Want to read"
+- assertVisible: "Search"
+- assertVisible: "Sync now|Synced|Syncing.*"
+# Decor
+- tapOn: "Next page"
+- assertVisible: "Pages turned"
+- assertVisible: "Tree rings"
+- assertVisible: "Gathering dust"
+- runFlow:
+    when:
+      visible: "Next dusty book"
+    commands:
+      - assertVisible: "Open"
+      - tapOn: "Next dusty book"
+      - assertVisible: "Gathering dust"
+- tapOn: "Page Insights"
+- assertVisible: "Year in reading"
+- tapOn: "Page Home"
+- swipe:
+    start: 85%, 50%
+    end: 15%, 50%
+- assertVisible: "Year in reading"
+- swipe:
+    start: 15%, 50%
+    end: 85%, 50%
+- assertVisible: "Streak"
+# the other tabs still work in landscape
+- tapOn: "Planner"
+- assertVisible: "Weekly Planner"
+- tapOn: "Notes"
+- assertVisible: "Personal Notes"
+- tapOn: "★ Favorites"
+- assertVisible: "Favorite Notes"
+- tapOn: "Reading"
+- assertVisible: "Streak"

@@ -1,37 +1,49 @@
 appId: io.aragonite.notes
 ---
-# Reading tab: the board is a port of the KOReader board. Greeting, the Home boxes, the four pages and the lists behind
-# the link boxes open and close.
-- launchApp
-- extendedWaitUntil:
-    visible: "Reading"
-    timeout: 40000
-- tapOn: "Reading"
-- extendedWaitUntil:
-    visible: "Reading Board"
-    timeout: 20000
-- assertVisible: "Good .*"
-- assertVisible: "Streak"
+# Reading tab, PORTRAIT (4 columns): every page of the board and its boxes, the page controls (chevrons, dots, swipe).
+# Controls and the screens behind the boxes are in 52-reading-controls.yaml, the yearly goal in 53-reading-goal.yaml,
+# the Wi-Fi / Light / Night panels and opening a book in NeoReader in scripts/e2e-reading.sh (they leave the app).
+- runFlow: lib/open-reading.yaml
 - assertVisible: "This week"
 - assertVisible: ".* goal"
-- assertVisible: "Home"
-# Home -> Insights -> Library -> Decor with the page chevron
-- tapOn: "Next page"
-- assertVisible: "Insights"
-- assertVisible: "Year in reading"
-- tapOn: "Next page"
+- assertVisible: "Also reading"
+- assertVisible: "Discover"
+- assertVisible: "Recently added"
 - assertVisible: "Library"
+- assertVisible: "Authors"
+- assertVisible: "Series"
+- assertVisible: "On device"
+- assertVisible: "Home"
+# Home -> Insights -> Library -> Decor with the chevron
+- tapOn: "Next page"
+- assertVisible: "Year in reading"
+- assertVisible: "Reading records"
+- assertVisible: "When you read"
+- assertVisible: "Word of the day"
+- assertVisible: "A year ago"
+- assertVisible: "Finish.*"
+- tapOn: "Next page"
 - assertVisible: "Pick back up"
+- assertVisible: "Up next in series"
+- assertVisible: "Want to read"
+- assertVisible: "Collections"
+- assertVisible: "Finished"
 - assertVisible: "Search"
 - tapOn: "Next page"
-- assertVisible: "Decor"
 - assertVisible: "Pages turned"
-- tapOn: "Previous page"
-- tapOn: "Previous page"
-- tapOn: "Previous page"
-# a link box opens its list and the back arrow returns
-- assertVisible: "Authors"
-- tapOn: "Authors"
-- assertVisible: "Back"
-- tapOn: "Back"
+- assertVisible: "Tree rings"
+- assertVisible: "Gathering dust"
+# back with the dots
+- tapOn: "Page Insights"
+- assertVisible: "Year in reading"
+- tapOn: "Page Home"
+- assertVisible: "Streak"
+# swipe left and right between pages
+- swipe:
+    start: 85%, 50%
+    end: 15%, 50%
+- assertVisible: "Year in reading"
+- swipe:
+    start: 15%, 50%
+    end: 85%, 50%
 - assertVisible: "Streak"

@@ -1,0 +1,17 @@
+appId: io.aragonite.notes
+---
+# Shared step: the search field types, finds a book, and a long press opens its detail page. Needs "Wall Street" in the
+# NeoReader library (the owner's real library); Back returns to the board.
+- tapOn: "Search books"
+- assertVisible: "Search"
+- inputText: "wall"
+- hideKeyboard
+- assertVisible: "[0-9]+ results?"
+- assertVisible: "Wall Street"
+- longPressOn: "Wall Street"
+- assertVisible: "Open in NeoReader"
+- assertVisible: "Highlights.*"
+- tapOn: "Back"
+- assertVisible: "Search"
+- tapOn: "Back"
+- assertVisible: "Streak"

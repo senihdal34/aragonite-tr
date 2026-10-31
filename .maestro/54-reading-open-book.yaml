@@ -1,0 +1,5 @@
+appId: io.aragonite.notes
+---
+# Tapping the Resume button of the hero box opens the book in NeoReader (scripts/e2e-reading.sh checks the page it shows).
+- runFlow: lib/open-reading.yaml
+- tapOn: "Resume|Resume reading|Shuffle picks"

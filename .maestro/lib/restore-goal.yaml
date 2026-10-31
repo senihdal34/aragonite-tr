@@ -1,0 +1,17 @@
+appId: io.aragonite.notes
+---
+# Shared step: put the yearly goal back to 15 whatever state a failed run left it in (16 is one press too many).
+- runFlow: open-reading.yaml
+- tapOn: "Reading goal"
+- runFlow:
+    when:
+      visible: ".* of 16 books finished"
+    commands:
+      - tapOn: "Fewer books"
+- runFlow:
+    when:
+      visible: ".* of 14 books finished"
+    commands:
+      - tapOn: "More books"
+- assertVisible: ".* of 15 books finished"
+- tapOn: "Back"
