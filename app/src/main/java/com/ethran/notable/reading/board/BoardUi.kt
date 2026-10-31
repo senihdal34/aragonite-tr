@@ -250,9 +250,9 @@ fun BHead(iw: Int, label: String, right: (@Composable () -> Unit)? = null, color
 
 /** A chevron-bearing action in a header: bold text then a chevron ("All 2 >", "See all >"). */
 @Composable
-fun BHeadAction(label: String) {
+fun BHeadAction(label: String, onClick: (() -> Unit)? = null) {
     val bx = LocalBx.current
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(if (onClick != null) Modifier.tapOrHold(onClick) else Modifier, verticalAlignment = Alignment.CenterVertically) {
         BText(label, 13.0, bold = true)
         HGap(bx.px(2))
         Ic("chevron-right", 15, Ink.black, 2.5f)

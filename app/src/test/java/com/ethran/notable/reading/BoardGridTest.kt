@@ -125,3 +125,33 @@ class BoardGridTest {
         assertTrue(fit.placed.none { it.item.id == "e" })
     }
 }
+
+class BoardGridPixelTest {
+    private val s = com.ethran.notable.reading.board.BoardMetrics.scale(1860, 2480, 300f)
+    private val g = BoardGrid.geometryPx({ s.px(it) }, 1860, 2480, s.layoutWidth(1860).toInt())
+
+    @Test fun portraitTabletGeometryMatchesTheKoreaderBoard() {
+        assertEquals(4, g.cols)
+        assertEquals(s.px(24), g.margin)
+        assertEquals(1860 - 2 * s.px(24), g.width)
+        assertEquals(s.px(10), g.gap)
+        assertEquals((g.width - 3 * g.gap) / 4, g.colWidth)
+        assertEquals(2480 - s.px(6) - s.px(64) - s.px(8) - s.px(8) - s.px(40) - s.px(8), g.available)
+        assertEquals(s.px(84), g.minRow)
+    }
+
+    @Test fun fullScreenPortraitHomeIsSevenRowsOfAbout280Pixels() {
+        val tiles = com.ethran.notable.reading.board.BoardStore.starterPages(4)[0].tiles
+        val fit = BoardGrid.fitPage(g, tiles.mapIndexed { i, t -> Item("$i", t.cw, t.rh) })
+        assertEquals(7, fit.rows); assertTrue(fit.dropped.isEmpty())
+        assertTrue(fit.rowHeight in 275..290)   // the KOReader screenshot's rows are 280 px
+    }
+
+    @Test fun aShorterAreaDropsBoxesFromTheEndInsteadOfShrinkingRows() {
+        val short = BoardGrid.geometryPx({ s.px(it) }, 1860, 1500, 769)
+        val tiles = com.ethran.notable.reading.board.BoardStore.starterPages(4)[0].tiles
+        val fit = BoardGrid.fitPage(short, tiles.mapIndexed { i, t -> Item("$i", t.cw, t.rh) })
+        assertTrue(fit.dropped.isNotEmpty())
+        assertTrue(fit.rowHeight >= short.minRow)
+    }
+}

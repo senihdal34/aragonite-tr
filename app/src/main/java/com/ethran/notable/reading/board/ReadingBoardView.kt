@@ -60,7 +60,10 @@ import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
-private enum class Sub(val title: String) { Library("Library"), Authors("Authors"), Series("Series"), OnDevice("On device"), Collections("Collections"), Finished("Finished"), InProgress("Also reading") }
+private enum class Sub(val title: String) {
+    Library("Library"), Authors("Authors"), Series("Series"), OnDevice("On device"), Collections("Collections"), Finished("Finished"),
+    InProgress("Also reading"), Shelf("")
+}
 
 /** The device's own state the header and some boxes show: Wi-Fi, battery, clock and storage. */
 private class Device(val online: Boolean, val battery: Int, val clock: String, val weekday: String, val dayMonth: String, val dateLong: String, val storage: Storage?)
@@ -122,6 +125,8 @@ fun ReadingBoardView(ui: ReadingUi, onOpen: (RBook) -> Unit, modifier: Modifier 
     val density = LocalDensity.current
     var page by rememberSaveable { mutableIntStateOf(0) }
     var sub by remember { mutableStateOf<Sub?>(null) }
+    var shelfKind by remember { mutableStateOf("random") }
+    var dustSkip by remember { mutableIntStateOf(0) }
     var detailId by remember { mutableStateOf<String?>(null) }
     var searching by remember { mutableStateOf(false) }
     var goalOpen by remember { mutableStateOf(false) }
@@ -145,6 +150,8 @@ fun ReadingBoardView(ui: ReadingUi, onOpen: (RBook) -> Unit, modifier: Modifier 
             when (kind) {
                 "library" -> sub = Sub.Library; "authors" -> sub = Sub.Authors; "series" -> sub = Sub.Series; "device" -> sub = Sub.OnDevice
                 "collections" -> sub = Sub.Collections; "scopes" -> sub = Sub.Finished; "search" -> searching = true
+                "in-progress" -> sub = Sub.InProgress
+                else -> if (kind.startsWith("shelf:")) { shelfKind = kind.removePrefix("shelf:"); sub = Sub.Shelf }
             }
         },
         onSync = onRefresh,
@@ -155,7 +162,7 @@ fun ReadingBoardView(ui: ReadingUi, onOpen: (RBook) -> Unit, modifier: Modifier 
                 "sync" -> onRefresh()
             }
         },
-        onShuffle = onRefresh
+        onShuffle = onRefresh, dustSkip = dustSkip, onDustNext = { dustSkip++ }
     )
 
     BoxWithConstraints(modifier.fillMaxSize()) {
@@ -176,7 +183,7 @@ fun ReadingBoardView(ui: ReadingUi, onOpen: (RBook) -> Unit, modifier: Modifier 
                     }
                     goalOpen -> Scrolling(g, heightPx) { GoalScreen(data.goalBooks, bd.finishedYear, today.year, onSetGoal) { goalOpen = false } }
                     searching -> Scrolling(g, heightPx) { SearchScreen(query, { query = it }, data.books, ctx) { searching = false; query = "" } }
-                    sub != null -> Scrolling(g, heightPx) { SubList(sub!!, bd, ctx) { sub = null } }
+                    sub != null -> Scrolling(g, heightPx) { SubList(sub!!, shelfKind, bd, ctx) { sub = null } }
                     !ui.sourceAvailable && ui.loaded -> BText(
                         "NeoReader's library could not be read, so there is nothing to show yet.", 14.0, italic = true, serif = true, color = Ink.g4, lines = 3, w = g.width
                     )
@@ -226,9 +233,11 @@ private fun androidx.compose.foundation.layout.ColumnScope.Scrolling(g: BoardGri
 @Composable
 private fun TileView(c: BoardCtx, tile: Tile, w: Int, h: Int, cols: Int) {
     val fill = if (tile.type == "hero") BoardColour.heroFill(c.lead) else null
+    val lead = c.d.data.continueReading.firstOrNull()
     val tap = when (tile.type) {
         "link" -> { { c.onLink(tile.kind ?: "") } }
         "sync" -> c.onSync
+        "hero" -> lead?.let { b -> { c.onOpen(b) } }
         else -> null
     }
     BTile(w, h, tile.chrome, tile.key, fill, if (tap != null) Modifier.tapOrHold(tap) else Modifier) {
@@ -356,7 +365,7 @@ private fun BookRow(b: RBook, c: BoardCtx) {
 }
 
 @Composable
-private fun SubList(sub: Sub, bd: BoardData, c: BoardCtx, back: () -> Unit) {
+private fun SubList(sub: Sub, shelfKind: String, bd: BoardData, c: BoardCtx, back: () -> Unit) {
     val bx = LocalBx.current
     val books = bd.data.books
     val groups: List<Pair<String?, List<RBook>>> = when (sub) {
@@ -366,8 +375,9 @@ private fun SubList(sub: Sub, bd: BoardData, c: BoardCtx, back: () -> Unit) {
         Sub.Collections -> books.groupBy { it.path.substringBeforeLast('/', "").substringAfterLast('/') }.toList().sortedBy { it.first.lowercase() }
         Sub.Finished -> listOf(null to books.filter { it.finishedAt != null }.sortedByDescending { it.finishedAt })
         Sub.InProgress -> listOf(null to bd.data.continueReading)
+        Sub.Shelf -> listOf(null to bd.fullShelf(shelfKind))
     }
-    ScreenTitle(sub.title, back)
+    ScreenTitle(if (sub == Sub.Shelf) shelfTitle(shelfKind, bd.today.year) else sub.title, back)
     if (groups.all { it.second.isEmpty() }) BText("Nothing here yet.", 14.0, color = Ink.g4)
     groups.forEach { (header, list) ->
         if (header != null) {

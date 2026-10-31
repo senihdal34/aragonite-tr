@@ -79,39 +79,88 @@ private fun HintTile(w: Int, hh: Int, title: String, hint: String, right: (@Comp
 @Composable
 fun ChaptersWidget(c: BoardCtx, w: Int, hh: Int) {
     val ink = if (BoardColour.enabled) BoardColour.color(BoardColour.fam("chapters", c.lead).ink) else Ink.black
-    HintTile(w, hh, "Next stop", "Open a book and its chapters line up here.", { Ic("train-front", 17, ink, iconSw(2.25f)) })
+    HintTile(w, hh, "Next stop", "The chapter line is not available for NeoReader books yet.", { Ic("train-front", 17, ink, iconSw(2.25f)) })
 }
 
 @Composable
 fun BadgeWidget(c: BoardCtx, w: Int, hh: Int) {
-    HintTile(w, hh, "Next badge", "Finish a book and your first badge shows up here.", { Ic("award", 17, BoardColour.icon("badge"), iconSw(2.25f)) })
+    HintTile(w, hh, "Next badge", "Badges are not available in this app.", { Ic("award", 17, BoardColour.icon("badge"), iconSw(2.25f)) })
+}
+
+/** Dust over the cover and a cobweb across its top corner, each thread drawn dark and then light so it shows on any cover. */
+private fun DrawScope.drawDust(cw: Float, ch: Float, seed: Int, bx: Bx) {
+    drawRect(Color.White.copy(alpha = 0.22f), Offset.Zero, Size(cw, ch))
+    val rng = BoardRng(seed)
+    val count = Math.round(cw * ch / (bx.px(5.5) * bx.px(5.5).toFloat()))
+    repeat(count) {
+        val x = (rng.next() * cw).toFloat(); val y = (rng.next() * ch).toFloat()
+        val rr = max(0.6f, bx.px(0.35 + rng.next() * 0.8).toFloat())
+        drawCircle(if (rng.next() > 0.5) Color(0xFF999999) else Color(0xFFDDDDDD), rr, Offset(x, y))
+    }
+    val len = min(cw, ch) * 0.62f
+    val ox = cw; val oy = 0f
+    val angs = listOf(0.5, 0.78, 1.05, 1.32).map { PI / 2 + it * PI / 2 * 0.95 }
+    val threads = ArrayList<Path>()
+    for (a in angs) threads += Path().apply { moveTo(ox, oy); lineTo((ox + len * cos(a)).toFloat(), (oy + len * sin(a)).toFloat()) }
+    for (k in listOf(0.3, 0.5, 0.7, 0.9)) {
+        val p = Path()
+        angs.forEachIndexed { i, a ->
+            val x = (ox + len * k * cos(a)).toFloat(); val y = (oy + len * k * sin(a)).toFloat()
+            if (i == 0) p.moveTo(x, y) else {
+                val pa = angs[i - 1]
+                p.quadraticTo((ox + len * k * 0.86 * cos((a + pa) / 2)).toFloat(), (oy + len * k * 0.86 * sin((a + pa) / 2)).toFloat(), x, y)
+            }
+        }
+        threads += p
+    }
+    val tw = max(1, bx.px(0.8)).toFloat()
+    for (t in threads) drawPath(t, Color(0xFF333333), style = Stroke(tw + bx.px(1), cap = StrokeCap.Round))
+    for (t in threads) drawPath(t, Color.White, style = Stroke(tw, cap = StrokeCap.Round))
+    // A small spider let down on a thread.
+    val sx = (ox + len * 0.62 * cos(angs[1])).toFloat(); val sy0 = (oy + len * 0.62 * sin(angs[1])).toFloat(); val sy = sy0 + ch * 0.2f
+    drawLine(Color(0xFF333333), Offset(sx, sy0), Offset(sx, sy), strokeWidth = tw)
+    val br = bx.px(3.2).toFloat()
+    drawCircle(Color.White, br + bx.px(1), Offset(sx, sy + br * 0.35f)); drawCircle(Color.Black, br, Offset(sx, sy + br * 0.35f))
+    drawCircle(Color.Black, br * 0.6f, Offset(sx, sy - br * 0.85f))
 }
 
 @Composable
 fun DustWidget(c: BoardCtx, w: Int, hh: Int) {
     val bx = LocalBx.current
-    val dusty = c.d.data.books.filter { it.progress == 0.0 && it.finishedAt == null && it.lastReadAt == null && it.addedAt > 0 }.minByOrNull { it.addedAt }
-    val aged = dusty?.let { (c.nowMs - it.addedAt) / 86_400_000L }?.takeIf { it >= 14 }
-    if (dusty == null || aged == null) {
-        HintTile(w, hh, "Gathering dust", "Books you download and never open collect dust here.")
-        return
-    }
     val pad = bx.px(12)
     val iw = w - 2 * pad
     val ih = hh - 2 * pad
-    val coverH = ih - bx.lh1(13) - bx.px(8)
-    val coverW = (coverH * 2 / 3.0 + 0.5).toInt()
+    val book = c.d.dust(c.dustSkip)
+    if (book == null) {
+        HintTile(w, hh, "Gathering dust", "Books you download and never open collect dust here.")
+        return
+    }
+    val days = max(1L, (c.nowMs - book.addedAt) / 86_400_000L).toInt()
+    val months = days / 30
+    val since = if (months >= 1) "Never opened in $months ${if (months == 1) "month" else "months"}" else "Never opened in $days ${if (days == 1) "day" else "days"}"
+    val coverH = ih
+    val coverW = Math.round(ih * 2 / 3f)
     val tw = iw - coverW - bx.px(12)
+    val seed = book.id.hashCode()
     WPad(w, hh, pad) {
-        BHead(iw, "Gathering dust")
-        VGap(bx.px(8))
-        Row(Modifier.tapOrHold({ c.onOpen(dusty) }, { c.onInfo(dusty) })) {
-            BCover(dusty, coverW, coverH)
-            HGap(bx.px(12))
-            Column(Modifier.width(bx.d(tw)).height(bx.d(coverH)), verticalArrangement = Arrangement.Center) {
-                BText(dusty.title, 14.0, bold = true, lines = 2, w = tw)
-                VGap(bx.px(4))
-                BText("Added $aged days ago, never opened", 12.0, color = Ink.g4, lines = 2, w = tw)
+        Row(Modifier.width(bx.d(iw)).height(bx.d(ih)), horizontalArrangement = Arrangement.spacedBy(bx.dd(12))) {
+            Box(Modifier.tapOrHold({ c.onOpen(book) }, { c.onInfo(book) })) {
+                BCover(book, coverW, coverH, max(1, bx.px(1)), Ink.gb)
+                Canvas(Modifier.size(bx.d(coverW), bx.d(coverH))) { drawDust(coverW.toFloat(), coverH.toFloat(), seed, bx) }
+            }
+            Column(Modifier.width(bx.d(tw)).height(bx.d(ih))) {
+                BText("Gathering dust", 12.0, color = Ink.g4, w = tw)
+                BText(book.title, 14.0, bold = true, serif = true, lines = 2, w = tw)
+                BText(since, 12.0, color = Ink.g4, lines = 2, w = tw)
+                Flex()
+                Row(horizontalArrangement = Arrangement.spacedBy(bx.dd(8)), verticalAlignment = Alignment.CenterVertically) {
+                    val h = bx.px(30)
+                    Row(
+                        Modifier.height(bx.d(h)).clip(RoundedCornerShape(bx.d(h / 2))).background(Ink.black).tapOrHold({ c.onOpen(book) }),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) { HGap(bx.px(10)); Ic("book-open", 15, Ink.white, 2.5f); HGap(bx.px(6)); BText("Open", 13.0, bold = true, color = Ink.white); HGap(bx.px(12)) }
+                    BCircle(h, bg = Ink.white, border = max(1, bx.px(1.5)), modifier = Modifier.tapOrHold({ c.onDustNext() })) { Ic("arrow-right", 15, Ink.black, 2.25f) }
+                }
             }
         }
     }
@@ -379,7 +428,7 @@ fun MoonWidget(c: BoardCtx, w: Int, hh: Int) {
     val pad = bx.px(12)
     val iw = w - 2 * pad
     val ih = hh - 2 * pad
-    val m = remember(c.d.today) { ReadingDecor.moon(c.d.today) }
+    val m = remember(c.nowMs / 600_000) { BoardData.moon(c.nowMs) }
     val capH = bx.lh1(12) + bx.px(6)
     val dia0 = min(iw, ih - capH)
     val caption = dia0 >= bx.px(40)

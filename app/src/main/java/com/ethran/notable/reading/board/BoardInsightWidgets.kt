@@ -151,7 +151,7 @@ fun ForecastWidget(c: BoardCtx, w: Int, hh: Int) {
         }
         return
     }
-    val day = if (f.daysOut <= 1) "Tomorrow" else f.date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
+    val day = when (f.daysOut) { 0 -> "Today"; 1 -> "Tomorrow"; else -> f.date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH) }
     val date = "${f.date.dayOfMonth} ${shortMonth(f.date)}"
     fun wOf(t: String, s: Double, b: Boolean = false) = measurer.measure(AnnotatedString(t), boardStyle(bx, s, bold = b), maxLines = 1, softWrap = false).size.width
     val coverW = (ih * 2 / 3.0 + 0.5).toInt()

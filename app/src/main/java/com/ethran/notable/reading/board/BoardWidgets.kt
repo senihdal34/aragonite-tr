@@ -41,7 +41,9 @@ class BoardCtx(
     /** The colour family of the lead book's cover (Continue reading and the chapter line wear it). */
     val lead: Family?,
     val onOpen: (RBook) -> Unit, val onInfo: (RBook) -> Unit, val onLink: (String) -> Unit, val onSync: () -> Unit,
-    val onToggle: (String) -> Unit, val onShuffle: () -> Unit
+    val onToggle: (String) -> Unit, val onShuffle: () -> Unit,
+    /** The step the Gathering dust box is past today's book (its next arrow). */
+    val dustSkip: Int = 0, val onDustNext: () -> Unit = {}
 )
 
 @Composable internal fun ColumnScope.Flex() = Spacer(Modifier.weight(1f))
@@ -203,7 +205,10 @@ fun StreakWidget(c: BoardCtx, w: Int, hh: Int) {
         if (n > 0) BRuns(listOf(Run("$n", b = true, s = valS.toDouble()), Run(" " + if (n == 1) "day" else "days", color = Ink.g4)), 13.0, w = iw)
         else BRuns(listOf(Run("Read today", b = true, s = min(valS, 18).toDouble())), 13.0, w = iw)
         Flex()
-        Row(horizontalArrangement = Arrangement.spacedBy(bx.d(dotGap))) { c.d.streakWeek.forEach { BDot(dotSize, it, ink) } }
+        val dotRow: @Composable () -> Unit = { Row(horizontalArrangement = Arrangement.spacedBy(bx.d(dotGap))) { c.d.streakWeek.forEach { BDot(dotSize, it, ink) } } }
+        if (wide) {
+            Row(Modifier.width(bx.d(iw)), verticalAlignment = Alignment.CenterVertically) { dotRow(); Flex(); BText("best ${c.d.longestStreak}", 12.0, color = Ink.g4) }
+        } else dotRow()
     }
 }
 
@@ -260,6 +265,15 @@ fun GoalPaceWidget(c: BoardCtx, w: Int, hh: Int) {
     val done = c.d.finishedYear
     val year = c.d.today.year
     val title = "$year goal"
+    if (goal <= 0) {
+        val f = fitTitle(measurer, bx, "Set a reading goal to track your pace.", false, false, iw, listOf(13.0, 12.0, 11.0), 4, hh - 2 * pad - bx.lh1(13) - bx.px(6))
+        WPad(w, hh, pad) {
+            BHead(iw, title, { Ic("target", 16, BoardColour.ink("goalpace", Ink.black), iconSw(2.25f)) })
+            VGap(bx.px(6))
+            BText("Set a reading goal to track your pace.", f.s, color = Ink.g4, lines = max(1, f.lines), w = iw)
+        }
+        return
+    }
     val expected = goal * c.d.dayOfYear / 365.0
     val projected = (done * 365.0 / max(1, c.d.dayOfYear) + 0.5).toInt()
     val met = done >= goal
@@ -325,6 +339,7 @@ fun TogglesWidget(c: BoardCtx, w: Int, hh: Int) {
     val onCol = BoardColour.ink("toggles", Ink.black)
     // Wi-Fi, Light, Night and Sync, as the plugin draws them with a frontlight.
     val items = listOf(Triple("wifi", c.online, "wifi"), Triple("sun", false, "light"), Triple("moon", false, "night"), Triple("refresh-cw", false, "sync"))
+    val labels = mapOf("wifi" to "Wi-Fi", "light" to "Light", "night" to "Night", "sync" to "Sync")
     @Composable fun btn(size: Int, it: Triple<String, Boolean, String>) {
         val on = it.second
         BCircle(size, bg = if (on) onCol else Ink.white, border = if (on) 0 else max(1, bx.px(1.5)), modifier = Modifier.tapOrHold({ c.onToggle(it.third) })) {
@@ -348,7 +363,7 @@ fun TogglesWidget(c: BoardCtx, w: Int, hh: Int) {
                 Column(Modifier.width(bx.d(cw)), horizontalAlignment = Alignment.CenterHorizontally) {
                     btn(bd, it)
                     VGap(bx.px(5))
-                    BText(it.third.replaceFirstChar { ch -> ch.uppercase() }.let { n -> if (n == "Wifi") "Wi-Fi" else n }, 12.0, bold = it.second, w = cw, align = TextAlign.Center)
+                    BText(labels.getValue(it.third), 12.0, bold = it.second, w = cw, align = TextAlign.Center)
                 }
             }
         }
@@ -372,7 +387,7 @@ fun AlsoWidget(c: BoardCtx, w: Int, hh: Int) {
     val trk = BoardColour.track("also", Ink.gc)
     val measurer = rememberMeasurer()
     WPad(w, hh, pad) {
-        BHead(iw, "Also reading", { BHeadAction("All ${c.d.data.continueReading.size}") }, rightW = headActionW(bx, measurer, "All ${c.d.data.continueReading.size}"))
+        BHead(iw, "Also reading", { BHeadAction("All ${c.d.data.continueReading.size}") { c.onLink("in-progress") } }, rightW = headActionW(bx, measurer, "All ${c.d.data.continueReading.size}"))
         VGap(bx.px(6))
         if (n == 0) BText("Books you start show up here.", 13.0, color = Ink.g4, w = iw, lines = 3)
         for (i in 0 until n) {
@@ -479,9 +494,9 @@ fun ShelfWidget(c: BoardCtx, w: Int, hh: Int, tile: Tile, cols: Int) {
     val right: (@Composable () -> Unit)? = when {
         kind == "random" -> ({ Box(Modifier.width(bx.dd(36)).height(bx.d(bx.lh1(13))).tapOrHold({ c.onShuffle() }), contentAlignment = Alignment.CenterEnd) { Ic("shuffle", 17, iconCol, iconSw(2.25f)) } })
         books.isEmpty() -> null
-        kind == "finished" -> ({ BHeadAction("${c.d.finishedYear}") })
+        kind == "finished" -> ({ BHeadAction("${c.d.finishedYear}") { c.onLink("shelf:finished") } })
         kind == "want-to-read" -> null
-        else -> ({ BHeadAction("See all") })
+        else -> ({ BHeadAction("See all") { c.onLink("shelf:$kind") } })
     }
     WPad(w, hh, pad) {
         BHead(iw, title, right, rightW = if (kind == "random") bx.px(36) else if (kind == "want-to-read" || books.isEmpty()) 0 else headActionW(bx, rememberMeasurer(), if (kind == "finished") "${c.d.finishedYear}" else "See all"))
