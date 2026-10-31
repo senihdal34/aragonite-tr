@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <cache-path name="images" path="images/"/>
+    <!-- Books on the device, handed to the reader (NeoReader) as content links -->
+    <external-path name="books" path="Books/"/>
 </paths>

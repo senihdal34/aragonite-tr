@@ -122,6 +122,9 @@ fun HomeView(
     val section by viewModel.section.collectAsState()
     val hintScope = rememberCoroutineScope()
     val appContext = LocalContext.current.applicationContext
+    val readingVm: com.ethran.notable.reading.ReadingViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
+    // The Reading board reads NeoReader's data when it is opened and whenever we come back to it.
+    LaunchedEffect(section) { if (section == HomeSection.Reading) readingVm.refresh() }
 
     // The weekly planner is the start page: open it once per app start.
     LaunchedEffect(Unit) {
@@ -135,7 +138,7 @@ fun HomeView(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) { viewModel.refresh(); com.ethran.notable.reading.NeoReaderSource.probe(appContext) }
+            if (event == Lifecycle.Event.ON_RESUME) { viewModel.refresh(); if (viewModel.section.value == HomeSection.Reading) readingVm.refresh() }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -194,7 +197,13 @@ fun HomeView(
                 .padding(horizontal = 56.dp, vertical = 14.dp)
         ) {
             Masthead(state, selected, section, landscape, actions, adding, input)
-            if (section == HomeSection.Pinned) {
+            if (section == HomeSection.Reading) {
+                val reading by readingVm.ui.collectAsState()
+                com.ethran.notable.reading.board.ReadingBoardView(
+                    reading, onOpen = { book -> com.ethran.notable.reading.ReadingLauncher.open(appContext, book.path) },
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
+            } else if (section == HomeSection.Pinned) {
                 PinnedPage(state, actions)
                 NewNoteButton(actions, Modifier.align(Alignment.CenterHorizontally).padding(top = 26.dp, bottom = 20.dp))
             } else if (landscape) {
@@ -277,7 +286,7 @@ private fun Masthead(
         )
         Spacer(Modifier.width(18.dp))
         Text(
-            if (section == HomeSection.Pinned) "Favorite Notes" else "Personal Notes", fontFamily = Serif, fontWeight = FontWeight.Bold,
+            when (section) { HomeSection.Pinned -> "Favorite Notes"; HomeSection.Reading -> "Reading Board"; HomeSection.Notes -> "Personal Notes" }, fontFamily = Serif, fontWeight = FontWeight.Bold,
             fontSize = 36.sp, letterSpacing = (-1).sp, color = Ink, maxLines = 1, modifier = Modifier.weight(1f)
         )
         Column(horizontalAlignment = Alignment.End) {
@@ -299,8 +308,9 @@ private fun Masthead(
 @Composable
 private fun MainNav(section: HomeSection, a: HomeActions) {
     MainTabs(
-        active = if (section == HomeSection.Pinned) MainTab.Pinned else MainTab.Notes,
+        active = when (section) { HomeSection.Pinned -> MainTab.Pinned; HomeSection.Reading -> MainTab.Reading; HomeSection.Notes -> MainTab.Notes },
         onWeek = a.planner, onNotes = { a.section(HomeSection.Notes) }, onPinned = { a.section(HomeSection.Pinned) },
+        onReading = { a.section(HomeSection.Reading) },
         modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp)
     )
     Rule()

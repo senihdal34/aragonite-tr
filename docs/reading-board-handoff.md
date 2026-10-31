@@ -55,3 +55,7 @@ Tasarım referansı (kod olarak) `~/Workspace/Kai-Sync/projects/koreader-board/l
 - Streak, hafta çubukları, yıllık hedef, Also reading, Discover/Recent, vurgu NeoReader verisinden doğru.
 - Bir kitaba dokununca NeoReader o kitabı açar; dönünce pano güncellenir.
 - Dikey ve yatay çalışır; planner ve Notes ekranları bozulmaz; birim testleri geçer.
+
+## 8. Durum (ikinci tur)
+Yapıldı: dördüncü sekme (`MainTab.Reading`, `HomeSection.Reading`, planner sekme çubuğunda da), `ReadingViewModel` (Hilt, IO'da okur, kapak klasörü `Documents/ReadingCovers` yoksa `koreader/localboard-covers`), `reading/board/ReadingBoardView.kt` + `BoardBoxes.kt` (dikey: tek sütun; yatay: iki sütun), Home sayfası (selamlama, hero, streak, this week, yıllık hedef, also reading, discover), Library sayfası (recently added, Library/Authors/Series/On device kutuları → liste, günün vurgusu), sayfa çevirici, `ReadingLauncher` (FileProvider + `com.onyx.kreader`; `file_paths.xml`'e `Books/` eklendi), `ReadingText` testleri. Geçici `probe()` çağrısı kaldırıldı.
+Kalan: kedi/decor kutuları, heatmap/forecast/hours/records/yearago/word kutuları, arama, kitap ayrıntısı, hedef değiştirme menüsü, `BoardGrid` ızgara paketleyici (şimdilik elle yerleşim), tablette ekran görüntüsü ve kitap açma denemesi (Deneme B).

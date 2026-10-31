@@ -302,7 +302,8 @@ fun EditorView(
                                         active = com.ethran.notable.ui.components.MainTab.Week,
                                         onWeek = { goToWeek(PlannerWeeks.mondayOf(plannerDay ?: LocalDate.now())) },
                                         onNotes = { toHome(com.ethran.notable.ui.viewmodels.HomeSection.Notes) },
-                                        onPinned = { toHome(com.ethran.notable.ui.viewmodels.HomeSection.Pinned) }
+                                        onPinned = { toHome(com.ethran.notable.ui.viewmodels.HomeSection.Pinned) },
+                                        onReading = { toHome(com.ethran.notable.ui.viewmodels.HomeSection.Reading) }
                                     )
                                 }
                             }

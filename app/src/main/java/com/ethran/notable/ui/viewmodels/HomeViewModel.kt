@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-enum class HomeSection { Notes, Pinned }
+enum class HomeSection { Notes, Pinned, Reading }
 
 /** Remembers the open Home tab while the app process lives (Home is rebuilt when coming back from a note). */
 object HomeSectionMemory { var last: HomeSection? = null }
