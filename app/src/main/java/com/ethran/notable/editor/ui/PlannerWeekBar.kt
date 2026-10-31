@@ -79,3 +79,11 @@ fun PlannerDayBar(
         }
     }
 }
+
+/** Top-left button on a day page: back to the week planner. Sits below the system's top-edge touch zone. */
+@Composable
+fun PlannerBackPill(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(modifier.padding(top = 36.dp)) {
+        Box(Modifier.clip(Pill).background(Color.White).border(BorderStroke(1.5.dp, Color.Black), Pill)) { BarButton("‹ Planner", false, onClick) }
+    }
+}

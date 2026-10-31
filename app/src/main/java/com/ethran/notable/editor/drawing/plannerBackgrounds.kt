@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.ui.geometry.Offset
+import com.ethran.notable.planner.PlannerDone
 import com.ethran.notable.planner.PlannerLayout
 import com.ethran.notable.planner.PlannerWeeks
 import java.time.LocalDate
@@ -40,8 +41,27 @@ private val dayNum = paint(Color.BLACK, size = 80f, face = serifBold).apply { te
 private val dayNumInv = paint(Color.WHITE, size = 80f, face = serifBold).apply { textAlign = Paint.Align.CENTER }
 private val sectionP = paint(Color.BLACK, size = 52f, face = serifBold)
 
-private fun checkbox(canvas: Canvas, x: Float, bottom: Float, size: Float = 34f) {
-    canvas.drawRect(x, bottom - size, x + size, bottom, box)
+private val strike = paint(Color.DKGRAY, 4f)
+private val tick = paint(Color.WHITE, 4f)
+
+private fun checkbox(canvas: Canvas, x: Float, bottom: Float, size: Float = 34f, done: Boolean = false) {
+    if (done) {
+        canvas.drawRect(x, bottom - size, x + size, bottom, fillInk)
+        canvas.drawLine(x + size * 0.2f, bottom - size * 0.5f, x + size * 0.42f, bottom - size * 0.22f, tick)
+        canvas.drawLine(x + size * 0.42f, bottom - size * 0.22f, x + size * 0.8f, bottom - size * 0.78f, tick)
+    } else canvas.drawRect(x, bottom - size, x + size, bottom, box)
+}
+
+/** Check boxes and writing lines of one day starting at [y0]; ticked lines get a strike through the text. */
+private fun drawDayLines(canvas: Canvas, y0: Float, lines: Int, step: Float, w: Float, done: Set<Int>, lastLineDrawn: Boolean) {
+    val x = PlannerLayout.BOX_X
+    for (k in 1..lines) {
+        val ly = y0 + k * step
+        val isDone = k in done
+        checkbox(canvas, x, ly - step * 0.2f, step * 0.46f, isDone)
+        if (isDone) canvas.drawLine(x + step * 0.46f + 14f, ly - step * 0.38f, w - 60f, ly - step * 0.38f, strike)
+        if (k < lines || lastLineDrawn) canvas.drawLine(x, ly, w - 40f, ly, guide)
+    }
 }
 
 // Logo in the header, loaded once. Sizes match the Home header (logo 52 dp, title 36 sp, small block on the right)
@@ -55,9 +75,13 @@ private fun logo(context: android.content.Context): android.graphics.Bitmap? {
     }.getOrNull().also { logoBitmap = it }
 }
 
-private fun drawHeader(context: android.content.Context, canvas: Canvas, w: Float, oy: Float, title: String, line1: String, line2: String, percent: Int) {
-    logo(context)?.let { canvas.drawBitmap(it, 0f, 26f + oy, null) }
-    canvas.drawText(title, 132f, 97f + oy, titleP)
+private fun drawHeader(
+    context: android.content.Context, canvas: Canvas, w: Float, oy: Float, title: String, line1: String, line2: String, percent: Int,
+    withLogo: Boolean = true
+) {
+    // A day page has the back button (drawn by the editor) in the logo's place.
+    if (withLogo) logo(context)?.let { canvas.drawBitmap(it, 0f, 26f + oy, null) }
+    canvas.drawText(title, if (withLogo) 132f else 300f, 97f + oy, titleP)
     val right = w - PlannerLayout.RIGHT_MARGIN
     canvas.drawText(line1, right, 48f + oy, summary)
     canvas.drawText(line2, right, 80f + oy, summary)
@@ -92,22 +116,24 @@ fun drawPlannerWeekBg(
         val day = monday.plusDays(i.toLong())
         val y0 = layout.rowTop(i)
         val y1 = y0 + rowH
-        val isToday = day == today
-        if (isToday) canvas.drawRect(0f, y0, labelW, y1, fillInk)
-        canvas.drawText(PlannerWeeks.DAY_NAMES[i].uppercase(TR), labelW / 2f, y0 + rowH * 0.26f, if (isToday) dayNameInv else dayName)
-        canvas.drawText(day.dayOfMonth.toString(), labelW / 2f, y0 + rowH * 0.66f, if (isToday) dayNumInv else dayNum)
-        canvas.drawText(PlannerWeeks.monthName(day).uppercase(TR), labelW / 2f, y1 - rowH * 0.1f, if (isToday) dayNameInv else dayName)
+        drawDayLabel(canvas, labelW, y0, rowH, day, i, day == today)
         canvas.drawLine(0f, y1, w, y1, ink)
-        for (k in 1..layout.lines) {
-            val ly = y0 + k * step
-            checkbox(canvas, labelW + 28f, ly - step * 0.2f, step * 0.46f)
-            if (k < layout.lines) canvas.drawLine(labelW + 28f, ly, w - 40f, ly, guide)
-        }
+        drawDayLines(canvas, y0, layout.lines, step, w, PlannerDone.lines(day), lastLineDrawn = false)
     }
     canvas.drawLine(labelW, PlannerLayout.ROWS_TOP, labelW, PlannerLayout.ROWS_TOP + 7 * rowH, ink)
 }
 
-/** A day opened from the week page: a long check-box list that fills the screen (no scrolling). */
+private fun drawDayLabel(canvas: Canvas, labelW: Float, y0: Float, rowH: Float, day: LocalDate, idx: Int, isToday: Boolean) {
+    if (isToday) canvas.drawRect(0f, y0, labelW, y0 + rowH, fillInk)
+    canvas.drawText(PlannerWeeks.DAY_NAMES[idx].uppercase(TR), labelW / 2f, y0 + rowH * 0.26f, if (isToday) dayNameInv else dayName)
+    canvas.drawText(day.dayOfMonth.toString(), labelW / 2f, y0 + rowH * 0.66f, if (isToday) dayNumInv else dayNum)
+    canvas.drawText(PlannerWeeks.monthName(day).uppercase(TR), labelW / 2f, y0 + rowH * 0.9f, if (isToday) dayNameInv else dayName)
+}
+
+/**
+ * A day opened from the week page: the same row as on the week page first (its five lines are kept equal to the
+ * week row), then more lines down to the bottom. The page does not scroll.
+ */
 fun drawPlannerDayBg(
     context: android.content.Context, canvas: Canvas, scale: Float, day: LocalDate, today: LocalDate = LocalDate.now()
 ) {
@@ -118,16 +144,16 @@ fun drawPlannerDayBg(
     drawHeader(
         context, canvas, w, 0f, PlannerWeeks.DAY_FULL[idx],
         "${day.dayOfMonth} ${PlannerWeeks.monthName(day)}".uppercase(TR), "HAFTA ${PlannerWeeks.weekOfYear(PlannerWeeks.mondayOf(day))} · ${day.year}",
-        PlannerWeeks.yearPercent(today)
+        PlannerWeeks.yearPercent(today), withLogo = false
     )
+    val layout = PlannerLayout.week(h)
     val lines = PlannerLayout.dayLines(h)
-    val step = (h - PlannerLayout.ROWS_TOP - PlannerLayout.BOTTOM_MARGIN) / lines
-    for (k in 1..lines) {
-        val ly = PlannerLayout.ROWS_TOP + k * step
-        checkbox(canvas, 70f, ly - step * 0.2f, step * 0.42f)
-        canvas.drawLine(170f, ly, w - 40f, ly, guide)
-    }
-    canvas.drawLine(150f, PlannerLayout.ROWS_TOP, 150f, PlannerLayout.ROWS_TOP + lines * step, ink)
+    val labelW = PlannerLayout.LABEL_W
+    val top = PlannerLayout.ROWS_TOP
+    drawDayLabel(canvas, labelW, top, layout.rowH, day, idx, day == today)
+    drawDayLines(canvas, top, lines, layout.step, w, PlannerDone.lines(day), lastLineDrawn = true)
+    canvas.drawLine(0f, top + layout.rowH, w, top + layout.rowH, ink)   // the lines above are mirrored on the week page
+    canvas.drawLine(labelW, top, labelW, top + lines * layout.step, ink)
 }
 
 /** Second page of the week: a long check-box list and a ruled notes area (like the paper planner). */
