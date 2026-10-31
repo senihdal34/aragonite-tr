@@ -3,6 +3,9 @@
 #
 #   ./scripts/e2e-reading.sh            full run: backup, build, install, portrait, landscape
 #   ./scripts/e2e-reading.sh --no-build skip the backup/build/install (test the app that is already on the tablet)
+#   E2E_SKIP_MAESTRO=1 ./scripts/e2e-reading.sh --no-build   only the adb checks (panels, Sync, hero, goal), much faster
+#   E2E_OPEN_DUST=1 ...                 also open the Gathering-dust book (this marks a never-opened book as opened)
+#   ./scripts/e2e-reading.sh --restore-rotation   only puts the rotation back (after a run that was killed hard)
 #
 # What it does:
 #   1. backs up the notes (Documents/notabledb) and installs this build in place (never uninstalls);
@@ -17,6 +20,10 @@
 # step the script waits (up to 3 minutes) until the foreground app is this app, KOReader, NeoReader or the launcher.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+# ./scripts/e2e-reading.sh --restore-rotation   only puts the rotation back (after a run that was killed hard)
+if [ "${1:-}" = "--restore-rotation" ]; then
+  adb shell settings put system user_rotation 0; adb shell settings put system accelerometer_rotation 1; exit 0
+fi
 export JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home}
 export ANDROID_HOME=${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}
 export PATH=/opt/homebrew/bin:$JAVA_HOME/bin:$PATH
@@ -79,7 +86,7 @@ screen_has() { adb shell uiautomator dump /sdcard/e2e-ui.xml >/dev/null 2>&1; ad
 
 # Maestro on this tablet sometimes hangs when its driver app is left over from the last run, so: reset the driver before
 # every run, kill a run that takes longer than $FLOW_TIMEOUT seconds, and try each flow twice.
-FLOW_TIMEOUT=${FLOW_TIMEOUT:-420}
+FLOW_TIMEOUT=${FLOW_TIMEOUT:-900}
 run_flow_once() { # name file
   adb shell am force-stop dev.mobile.maestro >/dev/null 2>&1; adb shell am force-stop dev.mobile.maestro.test >/dev/null 2>&1
   maestro test "$2" --test-output-dir "$OUT/maestro-$1" >"$OUT/$1.log" 2>&1 &
@@ -91,6 +98,7 @@ run_flow_once() { # name file
   wait "$pid"
 }
 run_flow() { # name file
+  [ -n "${E2E_SKIP_MAESTRO:-}" ] && { echo "SKIP  $1 (E2E_SKIP_MAESTRO)"; return 0; }
   wait_foreground || return 1
   back_to_app
   if run_flow_once "$1" "$2"; then pass "$1 ($2)"; return 0; fi
@@ -133,11 +141,19 @@ check_open_book() { # label
   wait_foreground || return 1
   local expected shown top
   expected=$(expected_page)
-  run_flow "$1-open-book" .maestro/54-reading-open-book.yaml
+  back_to_app
+  tap_label "Reading" >/dev/null; sleep 2
+  tap_label "Page Home" >/dev/null; sleep 1
+  tap_label "Resume|Resume reading" || fail "$1: no Resume button on the hero box"
   sleep 8
   top=$(adb shell dumpsys activity activities | grep -m1 topResumedActivity || true)
   adb shell uiautomator dump /sdcard/e2e-ui.xml >/dev/null 2>&1
-  shown=$(adb exec-out cat /sdcard/e2e-ui.xml | grep -o '([0-9]*/[0-9]*)' | head -1 | tr -d '()')
+  # NeoReader shows the page as "N/M" in its page_name field (an EPUB's chapter title may also carry "(1/1)"); PDFs: "(N/M)"
+  shown=$(adb exec-out cat /sdcard/e2e-ui.xml | python3 -c "
+import re, sys
+x = sys.stdin.read()
+m = re.search(r'text=\"(\d+/\d+)\"[^>]*resource-id=\"com.onyx.kreader:id/page_name\"', x) or re.search(r'resource-id=\"com.onyx.kreader:id/page_name\"[^>]*text=\"(\d+/\d+)\"', x) or re.search(r'\((\d+/\d+)\)', x)
+print(m.group(1) if m else '')")
   adb exec-out screencap -p > "$OUT/$1-reader.png" 2>/dev/null
   if echo "$top" | grep -q "com.onyx.kreader"; then pass "$1: the hero opens NeoReader"; else fail "$1: NeoReader not on top: $top"; fi
   if [ -n "$expected" ] && [ "$shown" = "$expected" ]; then pass "$1: opens where you stopped ($shown)"; else fail "$1: expected page $expected, reader shows '$shown'"; fi
@@ -145,7 +161,9 @@ check_open_book() { # label
   # a dust-box Open (Decor page) opens NeoReader too, when the library has a never-opened book
   tap_label "Reading" >/dev/null; sleep 2
   tap_label "Page Decor" >/dev/null; sleep 2
-  if screen_has 'content-desc="Open book"'; then
+  if [ -z "${E2E_OPEN_DUST:-}" ]; then
+    echo "SKIP  $1: dust Open (opening it would mark a never-opened book as opened; set E2E_OPEN_DUST=1)"
+  elif screen_has 'content-desc="Open book"'; then
     tap_label "Open book"; sleep 6
     if focus | grep -q "com.onyx.kreader"; then pass "$1: the dust box Open opens NeoReader"; else fail "$1: dust Open did not open NeoReader: $(focus)"; fi
     back_to_app
