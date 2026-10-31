@@ -176,6 +176,19 @@ print(m.group(1) if m else '')")
   fi
 }
 
+# The Planner tab opens the handwritten week page (an editor on the pen surface: Maestro stalls there, adb does not).
+check_planner_tab() { # label
+  wait_foreground || return 1
+  back_to_app
+  tap_label "Reading" >/dev/null; sleep 2
+  tap_label "Planner" || { fail "$1: no Planner tab"; return; }
+  sleep 10
+  if screen_has 'BU HAFTA'; then pass "$1: the Planner tab opens the weekly page"; else fail "$1: the weekly planner page did not open"; fi
+  tap_label "Reading" || { fail "$1: no Reading tab on the planner page"; back_to_app; return; }
+  sleep 4
+  if screen_has 'content-desc="Page Home"'; then pass "$1: Reading tab reachable again from the planner page"; else fail "$1: board did not come back from the planner"; fi
+}
+
 check_goal_is_15() {
   wait_foreground || return 1
   back_to_app
@@ -206,6 +219,7 @@ run_flow controls-portrait .maestro/52-reading-controls.yaml
 run_flow goal-portrait .maestro/53-reading-goal.yaml
 check_goal_is_15
 check_toggles portrait
+check_planner_tab portrait
 check_open_book portrait
 adb exec-out screencap -p > "$OUT/portrait-end.png" 2>/dev/null
 fi
@@ -229,6 +243,7 @@ run_flow controls-landscape .maestro/55-reading-landscape-controls.yaml
 run_flow goal-landscape .maestro/53-reading-goal.yaml
 check_goal_is_15
 check_toggles landscape
+check_planner_tab landscape
 check_open_book landscape
 fi
 

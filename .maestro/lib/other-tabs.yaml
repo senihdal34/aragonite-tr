@@ -1,11 +1,7 @@
 appId: io.aragonite.notes
 ---
-# Shared step: the other three tabs open from the Reading tab and the way back works. The weekly planner page is a
-# drawing, so its week tool ("BU HAFTA") stands for it; Notes and Favorites are text pages.
-- tapOn: "Planner"
-- extendedWaitUntil:
-    visible: "BU HAFTA"
-    timeout: 60000
+# Shared step: Notes and Favorites open from the Reading tab and the way back works. (The Planner tab is an editor page
+# drawn on the pen surface; Maestro stalls on it on this tablet, so scripts/e2e-reading.sh checks it with adb.)
 - tapOn: "Notes"
 - extendedWaitUntil:
     visible: "Personal Notes"
