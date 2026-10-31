@@ -1,5 +1,10 @@
 package com.ethran.notable.reading
 
+import java.time.ZoneId
+import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
+import java.util.Locale
+
 /** Small text helpers of the board, kept apart from the UI so they are unit tested. */
 object ReadingText {
     fun greeting(hour: Int, name: String): String {
@@ -22,6 +27,20 @@ object ReadingText {
 
     /** Books a reader with [goal] books a year should have finished by [dayOfYear] of [daysInYear]. */
     fun expectedByNow(goal: Int, dayOfYear: Int, daysInYear: Int): Double = goal * dayOfYear.toDouble() / daysInYear
+
+    /** "Today", "Yesterday", "3 days ago", "2 weeks ago", or the date for anything older than a month; "Never" when unknown. */
+    fun lastRead(lastReadMs: Long?, nowMs: Long, zone: ZoneId = ZoneId.systemDefault()): String {
+        if (lastReadMs == null || lastReadMs <= 0L) return "Never"
+        val day = ReadingStats.dayOf(lastReadMs, zone)
+        val days = ChronoUnit.DAYS.between(day, ReadingStats.dayOf(nowMs, zone)).toInt()
+        return when {
+            days <= 0 -> "Today"
+            days == 1 -> "Yesterday"
+            days < 14 -> "$days days ago"
+            days < 31 -> "${days / 7} weeks ago"
+            else -> "${day.dayOfMonth} ${day.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)} ${day.year}"
+        }
+    }
 
     /** "On pace", "2 books ahead", "1 book behind". */
     fun pace(finished: Int, goal: Int, dayOfYear: Int, daysInYear: Int): String {

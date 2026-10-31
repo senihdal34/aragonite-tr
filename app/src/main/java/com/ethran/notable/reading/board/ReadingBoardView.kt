@@ -34,39 +34,58 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ethran.notable.reading.RBook
 import com.ethran.notable.reading.ReadingData
+import com.ethran.notable.reading.ReadingSearch
 import com.ethran.notable.reading.ReadingText
 import com.ethran.notable.reading.ReadingUi
 import java.time.LocalTime
 
 private enum class Sub { Library, Authors, Series, OnDevice }
-private val PAGES = listOf("Home", "Library")
+private val PAGES = listOf("Home", "Library", "Insights", "Decor")
 
 /**
- * The Reading board: pages of boxes (Home, Library), page dots at the bottom, and a list view behind the
- * Library boxes. Tapping a book opens it in NeoReader. Portrait stacks the boxes; landscape uses two columns.
+ * The Reading board: pages of boxes (Home, Library, Insights, Decor), page dots at the bottom, a search field on top,
+ * a list view behind the Library boxes and a detail view for one book (long press on a book, or its Info pill).
+ * Tapping a book opens it in NeoReader. Portrait stacks the boxes; landscape uses two columns.
  */
 @Composable
-fun ReadingBoardView(ui: ReadingUi, onOpen: (RBook) -> Unit, modifier: Modifier = Modifier) {
+fun ReadingBoardView(ui: ReadingUi, onOpen: (RBook) -> Unit, modifier: Modifier = Modifier, onSetGoal: ((Int) -> Unit)? = null) {
     var page by remember { mutableStateOf(0) }
     var sub by remember { mutableStateOf<Sub?>(null) }
+    var detailId by remember { mutableStateOf<String?>(null) }
+    var query by remember { mutableStateOf("") }
     val data = ui.data
+    val detail = detailId?.let { id -> data.books.firstOrNull { it.id == id } }
+    val info: (RBook) -> Unit = { detailId = it.id }
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val landscape = maxWidth > maxHeight
         Column(Modifier.fillMaxWidth()) {
-            if (sub != null) {
-                SubList(sub!!, data, onOpen) { sub = null }
+            if (detail != null) {
+                BookDetail(detail, data.highlights.filter { it.book?.id == detail.id }, data.now.takeIf { it > 0L } ?: System.currentTimeMillis(), onOpen) { detailId = null }
+            } else if (sub != null) {
+                SubList(sub!!, data, onOpen, info) { sub = null }
             } else {
                 Greeting(data)
+                SearchField(query, { query = it }, Modifier.padding(bottom = 14.dp))
                 if (!ui.sourceAvailable && ui.loaded) {
                     Text("NeoReader's library could not be read, so there is nothing to show yet.", fontFamily = FontFamily.Serif,
                         fontStyle = FontStyle.Italic, fontSize = 20.sp, color = Grey1, modifier = Modifier.padding(vertical = 24.dp))
-                } else if (page == 0) HomePage(data, landscape, onOpen) else LibraryPage(data, landscape, onOpen) { sub = it }
-                Spacer(Modifier.height(18.dp))
-                PageDots(page) { page = it }
+                } else if (query.isNotBlank()) {
+                    SearchResults(data, query, onOpen, info)
+                } else {
+                    when (page) {
+                        0 -> HomePage(data, landscape, onOpen, info, onSetGoal)
+                        1 -> LibraryPage(data, landscape, onOpen, info) { sub = it }
+                        2 -> InsightsPage(data, landscape, onOpen)
+                        else -> DecorPage(data, landscape)
+                    }
+                    Spacer(Modifier.height(18.dp))
+                    PageDots(page) { page = it }
+                }
             }
         }
     }
@@ -82,39 +101,39 @@ private fun Greeting(data: ReadingData) {
 }
 
 @Composable
-private fun HomePage(data: ReadingData, landscape: Boolean, onOpen: (RBook) -> Unit) {
+private fun HomePage(data: ReadingData, landscape: Boolean, onOpen: (RBook) -> Unit, onInfo: (RBook) -> Unit, onSetGoal: ((Int) -> Unit)?) {
     val hero = data.continueReading.firstOrNull()
     val gap = 12.dp
     if (landscape) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(gap)) {
-                HeroBox(hero, data.discover.firstOrNull(), onOpen, Modifier.fillMaxWidth())
-                ShelfBox("Discover", data.discover, onOpen, Modifier.fillMaxWidth())
+                HeroBox(hero, data.discover.firstOrNull(), onOpen, Modifier.fillMaxWidth(), onInfo)
+                ShelfBox("Discover", data.discover, onOpen, Modifier.fillMaxWidth(), onInfo)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(gap)) {
                 Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(gap)) {
                     StreakBox(data, Modifier.weight(1f).fillMaxHeight()); WeekBox(data, Modifier.weight(1f).fillMaxHeight())
                 }
-                GoalBox(data, Modifier.fillMaxWidth())
-                AlsoReadingBox(data, onOpen, Modifier.fillMaxWidth())
+                GoalBox(data, Modifier.fillMaxWidth(), onSetGoal)
+                AlsoReadingBox(data, onOpen, Modifier.fillMaxWidth(), onInfo)
             }
         }
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-            HeroBox(hero, data.discover.firstOrNull(), onOpen, Modifier.fillMaxWidth())
+            HeroBox(hero, data.discover.firstOrNull(), onOpen, Modifier.fillMaxWidth(), onInfo)
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(gap)) {
                 StreakBox(data, Modifier.weight(1f).fillMaxHeight()); WeekBox(data, Modifier.weight(1f).fillMaxHeight())
             }
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                GoalBox(data, Modifier.weight(1f).fillMaxHeight()); AlsoReadingBox(data, onOpen, Modifier.weight(1f).fillMaxHeight())
+                GoalBox(data, Modifier.weight(1f).fillMaxHeight(), onSetGoal); AlsoReadingBox(data, onOpen, Modifier.weight(1f).fillMaxHeight(), onInfo)
             }
-            ShelfBox("Discover", data.discover, onOpen, Modifier.fillMaxWidth())
+            ShelfBox("Discover", data.discover, onOpen, Modifier.fillMaxWidth(), onInfo)
         }
     }
 }
 
 @Composable
-private fun LibraryPage(data: ReadingData, landscape: Boolean, onOpen: (RBook) -> Unit, openSub: (Sub) -> Unit) {
+private fun LibraryPage(data: ReadingData, landscape: Boolean, onOpen: (RBook) -> Unit, onInfo: (RBook) -> Unit, openSub: (Sub) -> Unit) {
     val gap = 12.dp
     val links: @Composable (Modifier) -> Unit = { m ->
         Column(m, verticalArrangement = Arrangement.spacedBy(gap)) {
@@ -131,7 +150,7 @@ private fun LibraryPage(data: ReadingData, landscape: Boolean, onOpen: (RBook) -
     if (landscape) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(gap)) {
-                ShelfBox("Recently added", data.recentlyAdded, onOpen, Modifier.fillMaxWidth())
+                ShelfBox("Recently added", data.recentlyAdded, onOpen, Modifier.fillMaxWidth(), onInfo)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(gap)) {
                 links(Modifier.fillMaxWidth()); HighlightBox(data, Modifier.fillMaxWidth())
@@ -139,7 +158,7 @@ private fun LibraryPage(data: ReadingData, landscape: Boolean, onOpen: (RBook) -
         }
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-            ShelfBox("Recently added", data.recentlyAdded, onOpen, Modifier.fillMaxWidth())
+            ShelfBox("Recently added", data.recentlyAdded, onOpen, Modifier.fillMaxWidth(), onInfo)
             links(Modifier.fillMaxWidth())
             HighlightBox(data, Modifier.fillMaxWidth())
         }
@@ -162,7 +181,7 @@ private fun PageDots(page: Int, onPage: (Int) -> Unit) {
 }
 
 @Composable
-private fun SubList(sub: Sub, data: ReadingData, onOpen: (RBook) -> Unit, back: () -> Unit) {
+private fun SubList(sub: Sub, data: ReadingData, onOpen: (RBook) -> Unit, onInfo: (RBook) -> Unit, back: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Pill("← Back", onClick = back)
         Spacer(Modifier.width(16.dp))
@@ -178,14 +197,14 @@ private fun SubList(sub: Sub, data: ReadingData, onOpen: (RBook) -> Unit, back: 
     }
     groups.forEach { (header, books) ->
         if (header != null) Caps("$header · ${books.size}", Grey1, 13, Modifier.padding(top = 14.dp, bottom = 4.dp))
-        books.forEach { b -> BookRow(b, onOpen) }
+        books.forEach { b -> BookRow(b, onOpen, onInfo) }
     }
 }
 
 @Composable
-private fun BookRow(b: RBook, onOpen: (RBook) -> Unit) {
+internal fun BookRow(b: RBook, onOpen: (RBook) -> Unit, onInfo: (RBook) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(interactionSource = MutableInteractionSource(), indication = null) { onOpen(b) }.padding(vertical = 8.dp),
+        Modifier.fillMaxWidth().tapOrHold({ onOpen(b) }, { onInfo(b) }).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Cover(b, Modifier.width(44.dp).height(62.dp))
@@ -195,6 +214,66 @@ private fun BookRow(b: RBook, onOpen: (RBook) -> Unit) {
             if (b.author.isNotBlank()) Text(b.author, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 15.sp, color = Grey1, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Caps(if (b.finishedAt != null) "Done" else if (b.progress > 0) "${b.progress.toInt()}%" else "", Grey1, 12)
+        Spacer(Modifier.width(12.dp))
+        SmallPill("Info") { onInfo(b) }
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Grey2))
+}
+
+@Composable
+private fun SearchResults(data: ReadingData, query: String, onOpen: (RBook) -> Unit, onInfo: (RBook) -> Unit) {
+    val found = remember(data.books, query) { ReadingSearch.filter(data.books, query) }
+    Caps("${found.size} ${if (found.size == 1) "result" else "results"}", Grey1, 13, Modifier.padding(bottom = 4.dp))
+    if (found.isEmpty()) Text("No book matches “${query.trim()}”.", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 20.sp, color = Grey1, modifier = Modifier.padding(vertical = 12.dp))
+    found.forEach { BookRow(it, onOpen, onInfo) }
+}
+
+/** Two boxes side by side with equal height. */
+@Composable
+private fun SideBySide(
+    gap: Dp, left: @Composable (Modifier) -> Unit, right: @Composable (Modifier) -> Unit, modifier: Modifier = Modifier.fillMaxWidth()
+) {
+    Row(modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(gap)) {
+        left(Modifier.weight(1f).fillMaxHeight()); right(Modifier.weight(1f).fillMaxHeight())
+    }
+}
+
+@Composable
+private fun InsightsPage(data: ReadingData, landscape: Boolean, onOpen: (RBook) -> Unit) {
+    val gap = 12.dp
+    if (landscape) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(gap)) {
+                HeatmapBox(data, Modifier.fillMaxWidth()); RecordsBox(data, Modifier.fillMaxWidth()); YearAgoBox(data, Modifier.fillMaxWidth(), onOpen)
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(gap)) {
+                ForecastBox(data, Modifier.fillMaxWidth())
+                SideBySide(gap, { HoursBox(data, it) }, { WordBox(data, it) })
+            }
+        }
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            HeatmapBox(data, Modifier.fillMaxWidth())
+            ForecastBox(data, Modifier.fillMaxWidth())
+            SideBySide(gap, { HoursBox(data, it) }, { WordBox(data, it) })
+            RecordsBox(data, Modifier.fillMaxWidth())
+            YearAgoBox(data, Modifier.fillMaxWidth(), onOpen)
+        }
+    }
+}
+
+@Composable
+private fun DecorPage(data: ReadingData, landscape: Boolean) {
+    val gap = 12.dp
+    if (landscape) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+            BuddyBox(data, Modifier.weight(1f))
+            SideBySide(gap, { ClockBox(it) }, { MoonBox(it) }, Modifier.weight(1f))
+        }
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            BuddyBox(data, Modifier.fillMaxWidth())
+            SideBySide(gap, { ClockBox(it) }, { MoonBox(it) })
+        }
+    }
 }

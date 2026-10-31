@@ -20,6 +20,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,21 +49,24 @@ internal val Ink = Color(0xFF111111)
 internal val Grey1 = Color(0xFF555555)
 internal val Grey2 = Color(0xFF999999)
 internal val FillGrey = Color(0xFFE8E8E4)
-private val Serif = FontFamily.Serif
-private val Sans = FontFamily.SansSerif
+internal val Serif = FontFamily.Serif
+internal val Sans = FontFamily.SansSerif
 private val Corner = RoundedCornerShape(12.dp)
 
 enum class BoxKind { Ink, Fill, Line }
 
 @Composable
-internal fun BoardBox(kind: BoxKind, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
+internal fun BoardBox(
+    kind: BoxKind, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, onLongClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
     var m = modifier.clip(Corner)
     m = when (kind) {
         BoxKind.Ink -> m.background(Ink)
         BoxKind.Fill -> m.background(FillGrey)
         BoxKind.Line -> m.border(1.5.dp, Ink, Corner)
     }
-    if (onClick != null) m = m.clickable(interactionSource = MutableInteractionSource(), indication = null, onClick = onClick)
+    if (onClick != null) m = m.tapOrHold(onClick, onLongClick)
     Column(m.padding(16.dp), content = content)
 }
 
@@ -107,9 +114,9 @@ internal fun Cover(book: RBook, modifier: Modifier = Modifier) {
 // ---------- boxes ----------
 
 @Composable
-fun HeroBox(book: RBook?, discover: RBook?, onOpen: (RBook) -> Unit, modifier: Modifier = Modifier) {
+fun HeroBox(book: RBook?, discover: RBook?, onOpen: (RBook) -> Unit, modifier: Modifier = Modifier, onInfo: ((RBook) -> Unit)? = null) {
     val b = book ?: discover
-    BoardBox(BoxKind.Fill, modifier, onClick = b?.let { { onOpen(it) } }) {
+    BoardBox(BoxKind.Fill, modifier, onClick = b?.let { { onOpen(it) } }, onLongClick = b?.let { x -> onInfo?.let { f -> { f(x) } } }) {
         if (b == null) {
             Caps("Continue reading", Grey1)
             Text("No books yet. Put books in /sdcard/Books.", fontFamily = Serif, fontStyle = FontStyle.Italic, fontSize = 22.sp, color = Ink, modifier = Modifier.padding(top = 8.dp))
@@ -194,30 +201,34 @@ fun WeekBox(data: ReadingData, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun GoalBox(data: ReadingData, modifier: Modifier = Modifier) {
+fun GoalBox(data: ReadingData, modifier: Modifier = Modifier, onSetGoal: ((Int) -> Unit)? = null) {
     val today = LocalDate.now()
     val done = data.finishedThisYear.size
+    var editing by remember { mutableStateOf(false) }
     BoardBox(BoxKind.Line, modifier) {
-        Caps("${today.year} goal", Grey1)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Caps("${today.year} goal", Grey1, modifier = Modifier.weight(1f))
+            if (onSetGoal != null) SmallPill(if (editing) "Done" else "Goal") { editing = !editing }
+        }
         Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 4.dp)) {
             Text("$done", fontFamily = Serif, fontWeight = FontWeight.Bold, fontSize = 48.sp, color = Ink)
             Text("/ ${data.goalBooks} books", fontFamily = Sans, fontSize = 16.sp, color = Grey1, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
         }
         Bar(if (data.goalBooks > 0) done.toFloat() / data.goalBooks else 0f, BoxKind.Line)
         Text(ReadingText.pace(done, data.goalBooks, today.dayOfYear, today.lengthOfYear()), fontFamily = Sans, fontSize = 14.sp, color = Grey1, modifier = Modifier.padding(top = 8.dp))
+        if (editing && onSetGoal != null) GoalStepper(data.goalBooks, onSetGoal, Modifier.padding(top = 10.dp))
     }
 }
 
 @Composable
-fun AlsoReadingBox(data: ReadingData, onOpen: (RBook) -> Unit, modifier: Modifier = Modifier) {
+fun AlsoReadingBox(data: ReadingData, onOpen: (RBook) -> Unit, modifier: Modifier = Modifier, onInfo: ((RBook) -> Unit)? = null) {
     BoardBox(BoxKind.Line, modifier) {
         Caps("Also reading", Grey1)
         val list = data.alsoReading.take(3)
         if (list.isEmpty()) Text("Nothing else in progress", fontFamily = Serif, fontStyle = FontStyle.Italic, fontSize = 18.sp, color = Grey1, modifier = Modifier.padding(top = 8.dp))
         list.forEach { b ->
             Row(
-                Modifier.fillMaxWidth().padding(top = 10.dp)
-                    .clickable(interactionSource = MutableInteractionSource(), indication = null) { onOpen(b) },
+                Modifier.fillMaxWidth().padding(top = 10.dp).tapOrHold({ onOpen(b) }, onInfo?.let { f -> { f(b) } }),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Cover(b, Modifier.width(36.dp).height(50.dp))
@@ -232,13 +243,13 @@ fun AlsoReadingBox(data: ReadingData, onOpen: (RBook) -> Unit, modifier: Modifie
 }
 
 @Composable
-fun ShelfBox(title: String, books: List<RBook>, onOpen: (RBook) -> Unit, modifier: Modifier = Modifier) {
+fun ShelfBox(title: String, books: List<RBook>, onOpen: (RBook) -> Unit, modifier: Modifier = Modifier, onInfo: ((RBook) -> Unit)? = null) {
     BoardBox(BoxKind.Line, modifier) {
         Caps(title, Grey1)
         if (books.isEmpty()) Text("Nothing here yet", fontFamily = Serif, fontStyle = FontStyle.Italic, fontSize = 18.sp, color = Grey1, modifier = Modifier.padding(top = 8.dp))
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             books.take(4).forEach { b ->
-                Column(Modifier.weight(1f).clickable(interactionSource = MutableInteractionSource(), indication = null) { onOpen(b) }) {
+                Column(Modifier.weight(1f).tapOrHold({ onOpen(b) }, onInfo?.let { f -> { f(b) } })) {
                     Cover(b, Modifier.fillMaxWidth().height(150.dp))
                     Text(b.title, fontFamily = Serif, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, color = Ink, modifier = Modifier.padding(top = 4.dp))
                 }

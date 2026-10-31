@@ -201,7 +201,7 @@ fun HomeView(
                 val reading by readingVm.ui.collectAsState()
                 com.ethran.notable.reading.board.ReadingBoardView(
                     reading, onOpen = { book -> com.ethran.notable.reading.ReadingLauncher.open(appContext, book.path) },
-                    modifier = Modifier.padding(bottom = 24.dp)
+                    modifier = Modifier.padding(bottom = 24.dp), onSetGoal = readingVm::setGoal
                 )
             } else if (section == HomeSection.Pinned) {
                 PinnedPage(state, actions)

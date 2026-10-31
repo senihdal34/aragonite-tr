@@ -43,7 +43,9 @@ data class ReadingData(
     val authorCount: Int,
     val seriesCount: Int,
     val highlight: RHighlight?,
-    val highlights: List<RHighlight>
+    val highlights: List<RHighlight>,
+    /** For each reading day (epoch day), the ids of the books read that day, most read first. */
+    val booksByDay: Map<Long, List<String>> = emptyMap()
 ) {
     val alsoReading: List<RBook> get() = continueReading.drop(1)
     val totalBooks: Int get() = books.size

@@ -40,9 +40,17 @@ object ReadingStats {
         val pageEvents = events.filter { it.type == 1 && pathOf(it)?.let(byPath::containsKey) == true }
         val minutesByDay = HashMap<Long, Int>()
         val msByDay = HashMap<LocalDate, Long>()
+        val msByDayBook = HashMap<LocalDate, HashMap<String, Long>>()
         for (e in pageEvents) {
             val d = dayOf(e.time, zone)
-            msByDay[d] = (msByDay[d] ?: 0L) + e.durationMs.coerceIn(0L, PAGE_CAP_MS)
+            val ms = e.durationMs.coerceIn(0L, PAGE_CAP_MS)
+            msByDay[d] = (msByDay[d] ?: 0L) + ms
+            val path = pathOf(e) ?: continue
+            val perBook = msByDayBook.getOrPut(d) { HashMap() }
+            perBook[path] = (perBook[path] ?: 0L) + ms
+        }
+        val booksByDay = msByDayBook.entries.associate { (d, perBook) ->
+            d.toEpochDay() to perBook.entries.sortedByDescending { it.value }.map { it.key }
         }
         for ((d, ms) in msByDay) minutesByDay[d.toEpochDay()] = (ms / 60_000L).toInt()
         val readDays = msByDay.filter { it.value >= 30_000L }.keys
@@ -107,7 +115,7 @@ object ReadingStats {
             recentlyAdded = recent, finishedThisYear = finishedYear, streakDays = streak, weekMinutes = weekMinutes,
             weekDots = weekDots, todayIndex = today.dayOfWeek.value % 7, minutesByDay = minutesByDay,
             authorCount = rbooks.flatMap { it.authors }.distinct().size, seriesCount = rbooks.mapNotNull { it.series }.distinct().size,
-            highlight = todays, highlights = hl
+            highlight = todays, highlights = hl, booksByDay = booksByDay
         )
     }
 }
