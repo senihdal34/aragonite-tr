@@ -19,7 +19,12 @@ adb shell input keyevent KEYCODE_WAKEUP
 
 maestro test .maestro/50-reading.yaml
 
-# Open a book from the board: the hero "Continue" / "Open" pill, then NeoReader must be on top.
+# Open the book of the hero box: NeoReader must come to the front AT THE SAVED POSITION (page "(N/M)" of its own list).
+expected=$(adb shell "content query --uri content://com.onyx.content.database.ContentProvider/Metadata --projection lastAccess:progress" \
+  | python3 -c "
+import sys,re
+rows=[(int(m.group(1)),m.group(2)) for l in sys.stdin for m in [re.search(r'lastAccess=(\d+), progress=(\d+/\d+)',l)] if m]
+print(max(rows)[1] if rows else '')")
 cat > /tmp/open-book.yaml <<'YAML'
 appId: io.aragonite.notes
 ---
@@ -31,7 +36,10 @@ appId: io.aragonite.notes
 - tapOn: "CONTINUE|OPEN"
 YAML
 maestro test /tmp/open-book.yaml
-sleep 4
+sleep 8
 top=$(adb shell dumpsys activity activities | grep -m1 topResumedActivity || true)
+adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 || true
+shown=$(adb shell "cat /sdcard/ui.xml" | grep -o '([0-9]*/[0-9]*)' | head -1 | tr -d '()')
 adb shell input keyevent KEYCODE_BACK; sleep 1
-if echo "$top" | grep -q "com.onyx.kreader"; then echo "PASS  tapping a book opens NeoReader"; else echo "FAIL  NeoReader not on top: $top"; exit 1; fi
+echo "$top" | grep -q "com.onyx.kreader" && echo "PASS  tapping a book opens NeoReader" || { echo "FAIL  NeoReader not on top: $top"; exit 1; }
+if [ -n "$expected" ] && [ "$shown" = "$expected" ]; then echo "PASS  opens where you stopped ($shown)"; else echo "FAIL  expected page $expected, reader shows '$shown'"; exit 1; fi
