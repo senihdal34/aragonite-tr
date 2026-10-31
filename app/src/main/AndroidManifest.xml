@@ -6,6 +6,13 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
+    <!-- The reading board reads NeoReader's library and reading log through its content providers. -->
+    <queries>
+        <package android:name="com.onyx.kreader" />
+        <provider android:authorities="com.onyx.content.database.ContentProvider" />
+        <provider android:authorities="com.onyx.kreader.statistics.provider" />
+    </queries>
+
     <application
         android:name=".NotableApp"
         android:allowBackup="true"

@@ -121,6 +121,7 @@ fun HomeView(
     val selected by viewModel.selectedTopic.collectAsState()
     val section by viewModel.section.collectAsState()
     val hintScope = rememberCoroutineScope()
+    val appContext = LocalContext.current.applicationContext
 
     // The weekly planner is the start page: open it once per app start.
     LaunchedEffect(Unit) {
@@ -134,7 +135,7 @@ fun HomeView(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh()
+            if (event == Lifecycle.Event.ON_RESUME) { viewModel.refresh(); com.ethran.notable.reading.NeoReaderSource.probe(appContext) }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
