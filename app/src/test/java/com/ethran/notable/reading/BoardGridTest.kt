@@ -154,4 +154,31 @@ class BoardGridPixelTest {
         assertTrue(fit.dropped.isNotEmpty())
         assertTrue(fit.rowHeight >= short.minRow)
     }
+
+    // The Boox Go 10.3 (1860 x 2480, 300 dpi). The app's own header and tab bar take about 310 px of the height.
+    private fun tablet(w: Int, h: Int): Pair<BoardGrid.Geometry, Boolean> {
+        val sc = com.ethran.notable.reading.board.BoardMetrics.scale(1860, 2480, 300f)
+        return BoardGrid.geometryPx({ sc.px(it) }, w, h, sc.layoutWidth(w).toInt()) to (w > h)
+    }
+
+    @Test fun landscapeTabletUsesSixColumnsAndPortraitFour() {
+        assertEquals(6, tablet(2480, 1550).first.cols)
+        assertEquals(4, tablet(1860, 2170).first.cols)
+        assertEquals(28 , com.ethran.notable.reading.board.BoardGrid.marginFor(1025))
+    }
+
+    @Test fun everyPageKeepsAllItsBoxesAtRowsNoShorterThanTheMinimumInBothOrientations() {
+        for ((w, h) in listOf(2480 to 1550, 1860 to 2170)) {
+            val (geo, land) = tablet(w, h)
+            val pages = com.ethran.notable.reading.board.BoardStore.starterPages(geo.cols, hasLight = false, landscape = land)
+            for (page in pages) {
+                val fit = BoardGrid.fitPage(geo, page.tiles.mapIndexed { i, t -> Item("$i", t.cw, t.rh) })
+                assertTrue("${page.id} at ${w}x$h dropped ${fit.dropped.size} boxes", fit.dropped.isEmpty())
+                assertTrue("${page.id} at ${w}x$h rows ${fit.rowHeight} < min ${geo.minRow}", fit.rowHeight >= geo.minRow)
+                assertTrue("${page.id} at ${w}x$h grid ${fit.gridHeight} > ${geo.available}", fit.gridHeight <= geo.available)
+                val wide = fit.placed.maxOf { it.x + it.cw }
+                assertTrue("${page.id} at ${w}x$h has a box past the last column", wide <= geo.cols)
+            }
+        }
+    }
 }

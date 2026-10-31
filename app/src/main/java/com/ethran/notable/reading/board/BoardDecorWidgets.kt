@@ -35,6 +35,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.text.style.TextAlign
 import com.ethran.notable.R
 import com.ethran.notable.reading.BuddyPose
@@ -142,6 +146,23 @@ fun DustWidget(c: BoardCtx, w: Int, hh: Int) {
     val coverW = Math.round(ih * 2 / 3f)
     val tw = iw - coverW - bx.px(12)
     val seed = book.id.hashCode()
+    // The plugin's wide layouts, best first: (title lines, since line, buttons, label). The first whose lines fit the height
+    // wins, so a one-row box on a short screen gives up the label and the since line before the buttons (the extra
+    // "title and buttons" step keeps Open and the arrow, which the plugin's list drops before its last steps).
+    class V(val titleLines: Int, val since: Boolean, val buttons: Boolean, val label: Boolean)
+    val measurer = rememberMeasurer()
+    fun lineCount(text: String, s: Double, bold: Boolean, serif: Boolean, maxLines: Int): Int =
+        min(maxLines, max(1, measurer.measure(AnnotatedString(text), boardStyle(bx, s, bold = bold, serif = serif, multiline = true), constraints = Constraints(maxWidth = max(1, tw))).lineCount))
+    fun heightOf(v: V): Int {
+        var h = 0
+        if (v.label) h += bx.lh1(12)
+        h += bx.scale.textBoxHeight(lineCount(book.title, 14.0, true, true, v.titleLines), 14.0)
+        if (v.since) h += bx.scale.textBoxHeight(lineCount(since, 12.0, false, false, 2), 12.0)
+        if (v.buttons) h += bx.px(30)
+        return h
+    }
+    val variants = listOf(V(2, true, true, true), V(1, true, true, true), V(1, true, true, false), V(1, false, true, true), V(1, false, true, false), V(2, true, false, true), V(1, true, false, true))
+    val v = variants.firstOrNull { heightOf(it) <= ih } ?: variants.last()
     WPad(w, hh, pad) {
         Row(Modifier.width(bx.d(iw)).height(bx.d(ih)), horizontalArrangement = Arrangement.spacedBy(bx.dd(12))) {
             Box(Modifier.tapOrHold({ c.onOpen(book) }, { c.onInfo(book) })) {
@@ -149,17 +170,17 @@ fun DustWidget(c: BoardCtx, w: Int, hh: Int) {
                 Canvas(Modifier.size(bx.d(coverW), bx.d(coverH))) { drawDust(coverW.toFloat(), coverH.toFloat(), seed, bx) }
             }
             Column(Modifier.width(bx.d(tw)).height(bx.d(ih))) {
-                BText("Gathering dust", 12.0, color = Ink.g4, w = tw)
-                BText(book.title, 14.0, bold = true, serif = true, lines = 2, w = tw)
-                BText(since, 12.0, color = Ink.g4, lines = 2, w = tw)
+                if (v.label) BText("Gathering dust", 12.0, color = Ink.g4, w = tw)
+                BText(book.title, 14.0, bold = true, serif = true, lines = v.titleLines, w = tw)
+                if (v.since) BText(since, 12.0, color = Ink.g4, lines = 2, w = tw)
                 Flex()
-                Row(horizontalArrangement = Arrangement.spacedBy(bx.dd(8)), verticalAlignment = Alignment.CenterVertically) {
+                if (v.buttons) Row(horizontalArrangement = Arrangement.spacedBy(bx.dd(8)), verticalAlignment = Alignment.CenterVertically) {
                     val h = bx.px(30)
                     Row(
-                        Modifier.height(bx.d(h)).clip(RoundedCornerShape(bx.d(h / 2))).background(Ink.black).tapOrHold({ c.onOpen(book) }),
+                        Modifier.height(bx.d(h)).semantics { contentDescription = "Open book" }.clip(RoundedCornerShape(bx.d(h / 2))).background(Ink.black).tapOrHold({ c.onOpen(book) }),
                         verticalAlignment = Alignment.CenterVertically
                     ) { HGap(bx.px(10)); Ic("book-open", 15, Ink.white, 2.5f); HGap(bx.px(6)); BText("Open", 13.0, bold = true, color = Ink.white); HGap(bx.px(12)) }
-                    BCircle(h, bg = Ink.white, border = max(1, bx.px(1.5)), modifier = Modifier.tapOrHold({ c.onDustNext() })) { Ic("arrow-right", 15, Ink.black, 2.25f) }
+                    BCircle(h, bg = Ink.white, border = max(1, bx.px(1.5)), modifier = Modifier.semantics { contentDescription = "Next dusty book" }.tapOrHold({ c.onDustNext() })) { Ic("arrow-right", 15, Ink.black, 2.25f) }
                 }
             }
         }

@@ -35,6 +35,7 @@ class ReadingViewModel @Inject constructor(@ApplicationContext private val conte
             val books = NeoReaderSource.library(context)
             val events = NeoReaderSource.events(context)
             val highlights = NeoReaderSource.highlights(context)
+            Log.i(TAG, "refresh: books=${books.size} events=${events.size} highlights=${highlights.size}")
             syncCovers(books)
             val coverDir = COVER_DIRS.map(::File).firstOrNull { it.isDirectory }
             if (books.isEmpty() && _ui.value.loaded) return@launch   // keep what we had

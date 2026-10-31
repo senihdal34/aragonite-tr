@@ -118,4 +118,14 @@ class BoardDataTest {
         assertEquals(10, bd.months.last().month); assertEquals(2025, bd.months.first().year); assertEquals(11, bd.months.first().month)
         assertEquals(48, bd.months.first { it.month == 9 }.minutes)
     }
+
+    @Test fun shufflingTheDiscoverShelfPicksFromUnreadBooksAndChangesWithEachPress() {
+        val books = (1..20).map { book("b$it") } + book("read", progress = 40.0)
+        val d = data(books = books).copy(discover = books.take(6))
+        val first = BoardData(d, today).shelf("random")
+        assertEquals(books.take(6), first)                                       // no press yet: the day's own picks
+        val picks = (1..6).map { BoardData(d, today, shuffle = it).shelf("random").map { b -> b.id } }
+        assertTrue(picks.all { it.size == 6 && "read" !in it })
+        assertTrue(picks.distinct().size > 1)                                    // pressing again gives other books
+    }
 }

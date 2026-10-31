@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -130,6 +131,7 @@ fun ReadingBoardView(ui: ReadingUi, onOpen: (RBook) -> Unit, modifier: Modifier 
     var sub by remember { mutableStateOf<Sub?>(null) }
     var shelfKind by remember { mutableStateOf("random") }
     var dustSkip by remember { mutableIntStateOf(0) }
+    var shuffle by remember { mutableIntStateOf(0) }
     var detailId by remember { mutableStateOf<String?>(null) }
     var searching by remember { mutableStateOf(false) }
     var goalOpen by remember { mutableStateOf(false) }
@@ -137,7 +139,7 @@ fun ReadingBoardView(ui: ReadingUi, onOpen: (RBook) -> Unit, modifier: Modifier 
     var lastSync by remember { mutableStateOf<Long?>(null) }
     val data = ui.data
     val today = remember(data) { ReadingInsights.today(data) }
-    val bd = remember(data, today) { BoardData(data, today) }
+    val bd = remember(data, today, shuffle) { BoardData(data, today, shuffle = shuffle) }
     val device = rememberDevice(data)
     val lead = rememberLeadFamily(data.continueReading.firstOrNull())
     val dm = context.resources.displayMetrics
@@ -165,7 +167,7 @@ fun ReadingBoardView(ui: ReadingUi, onOpen: (RBook) -> Unit, modifier: Modifier 
                 "sync" -> onRefresh()
             }
         },
-        onShuffle = onRefresh, dustSkip = dustSkip, onDustNext = { dustSkip++ }
+        onShuffle = { shuffle++ }, dustSkip = dustSkip, onDustNext = { dustSkip++ }
     )
 
     BoxWithConstraints(modifier.fillMaxSize()) {
@@ -332,8 +334,13 @@ private fun BoardFooter(w: Int, h: Int, names: List<String>, page: Int, onPage: 
     Row(Modifier.width(bx.d(w)).height(bx.d(h)), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
         chev("chevron-left", page > 0, page - 1)
         HGap(bx.px(6))
-        Row(horizontalArrangement = Arrangement.spacedBy(bx.dd(6)), verticalAlignment = Alignment.CenterVertically) {
-            names.indices.forEach { i -> Box(Modifier.tapOrHold({ onPage(i) })) { BDot(bx.px(7), i == page, Ink.black, Ink.g8) } }
+        // Each dot has a tap area as tall as the footer and as wide as the dot plus its gap, so a finger can hit it.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            names.indices.forEach { i ->
+                Box(Modifier.size(bx.d(bx.px(13)), bx.d(h)).semantics { contentDescription = "Page ${names[i]}" }.tapOrHold({ onPage(i) }), contentAlignment = Alignment.Center) {
+                    BDot(bx.px(7), i == page, Ink.black, Ink.g8)
+                }
+            }
         }
         HGap(bx.px(6) + bx.px(4) + bx.px(6))
         BText(names[page], 13.0, bold = true)
@@ -433,11 +440,11 @@ private fun GoalScreen(goal: Int, done: Int, year: Int, onSet: ((Int) -> Unit)?,
     if (onSet != null) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(bx.dd(14))) {
             val enabledMinus = goal > ReadingGoal.MIN; val enabledPlus = goal < ReadingGoal.MAX
-            BCircle(bx.px(44), bg = Ink.white, border = max(1, bx.px(1.5)), borderCol = if (enabledMinus) Ink.black else Ink.gb, modifier = Modifier.tapOrHold({ if (enabledMinus) onSet(ReadingGoal.step(goal, -1)) })) {
+            BCircle(bx.px(44), bg = Ink.white, border = max(1, bx.px(1.5)), borderCol = if (enabledMinus) Ink.black else Ink.gb, modifier = Modifier.semantics { contentDescription = "Fewer books" }.tapOrHold({ if (enabledMinus) onSet(ReadingGoal.step(goal, -1)) })) {
                 Ic("minus", 22, if (enabledMinus) Ink.black else Ink.gb, 2.75f)
             }
             Box(Modifier.width(bx.dd(64)), contentAlignment = Alignment.Center) { BText("$goal", 28.0, bold = true) }
-            BCircle(bx.px(44), bg = Ink.white, border = max(1, bx.px(1.5)), borderCol = if (enabledPlus) Ink.black else Ink.gb, modifier = Modifier.tapOrHold({ if (enabledPlus) onSet(ReadingGoal.step(goal, 1)) })) {
+            BCircle(bx.px(44), bg = Ink.white, border = max(1, bx.px(1.5)), borderCol = if (enabledPlus) Ink.black else Ink.gb, modifier = Modifier.semantics { contentDescription = "More books" }.tapOrHold({ if (enabledPlus) onSet(ReadingGoal.step(goal, 1)) })) {
                 Ic("plus", 22, if (enabledPlus) Ink.black else Ink.gb, 2.75f)
             }
             BText("books a year", 13.0, color = Ink.g4)
@@ -453,7 +460,8 @@ private fun BookDetailScreen(book: RBook, highlights: List<com.ethran.notable.re
     Row(Modifier.fillMaxWidth()) {
         BCover(book, coverW, coverH, max(1, bx.px(1)), Ink.g6)
         HGap(bx.px(16))
-        Column(Modifier.weight(1f)) {
+        // On a wide (landscape) screen the facts stay in a column next to the cover instead of spreading to the far edge.
+        Column(Modifier.weight(1f, fill = false).widthIn(max = bx.dd(460))) {
             BText(book.title, 22.0, bold = true, lines = 4)
             if (book.author.isNotBlank()) { VGap(bx.px(4)); BText(book.authors.joinToString(", "), 14.0, color = Ink.g4, lines = 2) }
             book.series?.let { VGap(bx.px(4)); BText(it, 12.0, color = Ink.g4) }

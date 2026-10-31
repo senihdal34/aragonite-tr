@@ -23,8 +23,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import com.ethran.notable.reading.RBook
 import kotlin.math.floor
 import kotlin.math.max
@@ -160,7 +163,7 @@ private fun EmptyHero(c: BoardCtx, w: Int, hh: Int, pad: Int, label: Color) {
     val bx = LocalBx.current
     val iw = w - 2 * pad
     val ih = hh - 2 * pad
-    val picks = c.d.data.discover
+    val picks = c.d.shelf("random")
     val g2 = bx.px(8)
     val btnH = bx.px(38)
     val ch = min(bx.px(120), ih - bx.lh1(11) - bx.px(3) - 2 * bx.lh(16) - bx.px(10) - bx.px(10) - btnH)
@@ -176,7 +179,7 @@ private fun EmptyHero(c: BoardCtx, w: Int, hh: Int, pad: Int, label: Color) {
         }
         VGap(bx.px(10))
         Row(
-            Modifier.height(bx.d(btnH)).clip(RoundedCornerShape(bx.d(btnH / 2))).background(Ink.white).tapOrHold({ c.onShuffle() }),
+            Modifier.height(bx.d(btnH)).semantics { contentDescription = "Shuffle picks" }.clip(RoundedCornerShape(bx.d(btnH / 2))).background(Ink.white).tapOrHold({ c.onShuffle() }),
             verticalAlignment = Alignment.CenterVertically
         ) {
             HGap(bx.px(13)); Ic("shuffle", 16, Ink.black, 2.25f); HGap(bx.px(8)); BText("Shuffle", 14.0, bold = true); HGap(bx.px(16))
@@ -343,7 +346,7 @@ fun TogglesWidget(c: BoardCtx, w: Int, hh: Int) {
     val labels = mapOf("wifi" to "Wi-Fi", "light" to "Light", "night" to "Night", "sync" to "Sync")
     @Composable fun btn(size: Int, it: Triple<String, Boolean, String>) {
         val on = it.second
-        BCircle(size, bg = if (on) onCol else Ink.white, border = if (on) 0 else max(1, bx.px(1.5)), modifier = Modifier.tapOrHold({ c.onToggle(it.third) })) {
+        BCircle(size, bg = if (on) onCol else Ink.white, border = if (on) 0 else max(1, bx.px(1.5)), modifier = Modifier.semantics { contentDescription = "Toggle " + labels.getValue(it.third) }.tapOrHold({ c.onToggle(it.third) })) {
             IcPx(it.first, floor(size * 0.46 + 0.5).toInt(), if (on) Ink.white else Ink.black, 2.25f)
         }
     }
@@ -439,20 +442,46 @@ fun HighlightWidget(c: BoardCtx, w: Int, hh: Int) {
     val tall = hh > bx.px(200)
     val p3 = if (hh < bx.px(130)) bx.px(12) else pad
     val iw3 = w - 2 * p3
+    val ih3 = hh - 2 * p3
     val attrH = bx.lh1(12) + if (tall) bx.px(2) + bx.lh1(12) else 0
     val qs = if (hh < bx.px(130)) 14.0 else 15.0
-    val budget = hh - 2 * p3 - bx.lh1(12) - bx.px(6) - bx.px(6) - attrH
-    val lines = max(1, budget / bx.lh(qs))
+    // The plugin's three layouts, best first; the first whose lines fit the height is used.
+    //   0: label, quote, book    1: quote, book (a short row)    2: the quote alone, centred
+    fun quoteLines(budget: Int) = max(1, budget / bx.lh(qs))
+    fun shown(lines: Int) = min(lines, max(1, measurer.measure(AnnotatedString(hl.quote), boardStyle(bx, qs, italic = true, serif = true, multiline = true), constraints = Constraints(maxWidth = max(1, iw3))).lineCount))
+    fun quoteH(lines: Int) = bx.scale.textBoxHeight(shown(lines), qs)
+    val lines0 = quoteLines(ih3 - bx.lh1(12) - bx.px(6) - bx.px(6) - attrH)
+    val lines1 = quoteLines(ih3 - bx.px(6) - bx.lh1(12))
+    val lines2 = quoteLines(ih3)
+    val layout = when {
+        bx.lh1(12) + bx.px(6) + quoteH(lines0) + bx.px(6) + attrH <= ih3 -> 0
+        quoteH(lines1) + bx.px(6) + bx.lh1(12) <= ih3 -> 1
+        else -> 2
+    }
     WPad(w, hh, p3) {
-        Row(Modifier.width(bx.d(iw3)).height(bx.d(bx.lh1(12))), verticalAlignment = Alignment.CenterVertically) {
-            Ic("quote", 14, deep, 1f, fill = true)
-            HGap(bx.px(6))
-            BText("Highlight of the day", 12.0, bold = true, color = Ink.g4)
+        when (layout) {
+            0 -> {
+                Row(Modifier.width(bx.d(iw3)).height(bx.d(bx.lh1(12))), verticalAlignment = Alignment.CenterVertically) {
+                    Ic("quote", 14, deep, 1f, fill = true)
+                    HGap(bx.px(6))
+                    BText("Highlight of the day", 12.0, bold = true, color = Ink.g4)
+                }
+                VGap(bx.px(6))
+                BText(hl.quote, qs, italic = true, serif = true, color = Ink.g1, lines = lines0, w = iw3)
+                Flex()
+                BText(hl.book?.title.orEmpty(), 12.0, bold = true, w = iw3)
+            }
+            1 -> {
+                BText(hl.quote, qs, italic = true, serif = true, color = Ink.g1, lines = lines1, w = iw3)
+                Flex()
+                BText(hl.book?.title.orEmpty(), 12.0, bold = true, w = iw3)
+            }
+            else -> {
+                Flex()
+                BText(hl.quote, qs, italic = true, serif = true, color = Ink.g1, lines = lines2, w = iw3)
+                Flex()
+            }
         }
-        VGap(bx.px(6))
-        BText(hl.quote, qs, italic = true, serif = true, color = Ink.g1, lines = lines, w = iw3)
-        Flex()
-        BText(hl.book?.title.orEmpty(), 12.0, bold = true, w = iw3)
     }
 }
 
@@ -493,7 +522,7 @@ fun ShelfWidget(c: BoardCtx, w: Int, hh: Int, tile: Tile, cols: Int) {
     val title = shelfTitle(kind, c.d.today.year)
     val iconCol = BoardColour.art(tile.key, Color.Black)
     val right: (@Composable () -> Unit)? = when {
-        kind == "random" -> ({ Box(Modifier.width(bx.dd(36)).height(bx.d(bx.lh1(13))).tapOrHold({ c.onShuffle() }), contentAlignment = Alignment.CenterEnd) { Ic("shuffle", 17, iconCol, iconSw(2.25f)) } })
+        kind == "random" -> ({ Box(Modifier.width(bx.dd(36)).height(bx.d(bx.lh1(13))).semantics { contentDescription = "Shuffle picks" }.tapOrHold({ c.onShuffle() }), contentAlignment = Alignment.CenterEnd) { Ic("shuffle", 17, iconCol, iconSw(2.25f)) } })
         books.isEmpty() -> null
         kind == "finished" -> ({ BHeadAction("${c.d.finishedYear}") { c.onLink("shelf:finished") } })
         kind == "want-to-read" -> null

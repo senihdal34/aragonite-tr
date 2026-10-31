@@ -141,7 +141,6 @@ fun ForecastWidget(c: BoardCtx, w: Int, hh: Int) {
     val pad = bx.px(12)
     val iw = w - 2 * pad
     val ih = hh - 2 * pad
-    val tall = hh >= bx.px(160)
     val ink = BoardColour.icon("forecast")
     if (f == null) {
         WPad(w, hh, pad) {
@@ -151,28 +150,54 @@ fun ForecastWidget(c: BoardCtx, w: Int, hh: Int) {
         }
         return
     }
-    val day = when (f.daysOut) { 0 -> "Today"; 1 -> "Tomorrow"; else -> f.date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH) }
+    val dayLong = when (f.daysOut) { 0 -> "Today"; 1 -> "Tomorrow"; else -> f.date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH) }
     val date = "${f.date.dayOfMonth} ${shortMonth(f.date)}"
+    val dayShort = (if (f.daysOut <= 1) dayLong else shortWeekday(f.date)) + " ${f.date.dayOfMonth}"
     fun wOf(t: String, s: Double, b: Boolean = false) = measurer.measure(AnnotatedString(t), boardStyle(bx, s, bold = b), maxLines = 1, softWrap = false).size.width
     val coverW = (ih * 2 / 3.0 + 0.5).toInt()
-    val tw = iw - coverW - bx.px(12)
-    val bottoms = listOf("${BoardData.duration(f.minutesLeft)} left at ~${f.perDay} min a day", "${BoardData.duration(f.minutesLeft)} left", "${BoardData.shortDuration(f.minutesLeft)} left")
-    val dayS = if (tall) 26.0 else 22.0
-    val dayFits = wOf(day, dayS, true) + wOf("  $date", 13.0) <= tw
-    val bottom = bottoms.firstOrNull { wOf(it, 12.0) <= tw } ?: bottoms.last()
+    // The plugin's list of layouts, best first: the first one whose words fit the width and whose lines fit the height wins.
+    // A one-row box on a short screen ends on the plainer ones. day: 0 long ("Sunday  22 Nov"), 1 weekday only, 2 short ("Sun 22").
+    class Cfg(val side: Boolean, val day: Int, val bottom: Int, val label: String)
+    val cfgs = listOf(
+        Cfg(true, 0, 2, "Finish forecast"), Cfg(true, 0, 1, "Finish forecast"), Cfg(false, 0, 2, "Finish forecast"), Cfg(false, 0, 1, "Finish forecast"),
+        Cfg(true, 1, 1, "Finish"), Cfg(false, 1, 0, "Finish"), Cfg(false, 2, 0, "Finish"), Cfg(false, 2, -1, "Finish")
+    )
+    fun bottomText(level: Int) = when (level) {
+        2 -> "${BoardData.duration(f.minutesLeft)} left at ~${f.perDay} min a day"
+        1 -> "${BoardData.duration(f.minutesLeft)} left"
+        else -> "${BoardData.shortDuration(f.minutesLeft)} left"
+    }
+    fun dayH(c: Cfg) = if (c.day == 2) bx.lh1(20) else bx.lh1(22)
+    fun fits(c: Cfg): Boolean {
+        val tw = if (c.side) iw - coverW - bx.px(12) else iw
+        val labelW = wOf(c.label, 13.0, true) + if (c.side) 0 else bx.px(16) + bx.px(4)
+        val dayW = when (c.day) { 0 -> wOf(dayLong, 22.0, true) + wOf("  $date", 13.0); 1 -> wOf(dayLong, 22.0, true); else -> wOf(dayShort, 20.0, true) }
+        val bottomW = if (c.bottom >= 0) wOf(bottomText(c.bottom), 12.0) else 0
+        val h = bx.lh1(13) + dayH(c) + if (c.bottom >= 0) bx.px(4) + bx.lh1(12) else 0
+        return labelW <= tw && dayW <= tw && bottomW <= tw && h <= ih
+    }
+    val cfg = cfgs.firstOrNull { fits(it) } ?: cfgs.last()
+    val tw = if (cfg.side) iw - coverW - bx.px(12) else iw
     WPad(w, hh, 0) {
         Row(Modifier.size(bx.d(w), bx.d(hh))) {
             HGap(pad)
             Column(Modifier.width(bx.d(tw)).fillMaxHeight().padding(vertical = bx.d(pad))) {
-                BHead(tw, if (dayFits) "Finish forecast" else "Finish")
+                BHead(tw, cfg.label, if (cfg.side) null else ({ Ic("hourglass", 16, ink, iconSw(2.25f)) }))
                 Flex()
-                if (dayFits) BRuns(listOf(Run(day, b = true, s = dayS), Run("  $date", color = Ink.g4)), 13.0, w = tw)
-                else BText(day, 22.0, bold = true, w = tw)
-                VGap(bx.px(4))
-                BText(bottom, 12.0, color = Ink.g4, w = tw)
+                when (cfg.day) {
+                    0 -> BRuns(listOf(Run(dayLong, b = true, s = 22.0), Run("  $date", color = Ink.g4)), 13.0, w = tw)
+                    1 -> BText(dayLong, 22.0, bold = true, w = tw)
+                    else -> BText(dayShort, 20.0, bold = true, w = tw)
+                }
+                if (cfg.bottom >= 0) {
+                    VGap(bx.px(4))
+                    BText(bottomText(cfg.bottom), 12.0, color = Ink.g4, w = tw)
+                }
             }
-            HGap(bx.px(12))
-            Column(Modifier.width(bx.d(coverW)).fillMaxHeight().padding(vertical = bx.d(pad))) { BCover(f.book, coverW, ih) }
+            if (cfg.side) {
+                HGap(bx.px(12))
+                Column(Modifier.width(bx.d(coverW)).fillMaxHeight().padding(vertical = bx.d(pad))) { BCover(f.book, coverW, ih) }
+            }
         }
     }
 }

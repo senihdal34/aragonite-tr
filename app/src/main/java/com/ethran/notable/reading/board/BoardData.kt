@@ -21,7 +21,7 @@ data class MonthMinutes(val month: Int, val year: Int, val minutes: Int)
  * What the board's boxes show, derived from [ReadingData] once per load: the plugin's d.* table (lb_board_data.lua).
  * Pure, so it is unit tested.
  */
-class BoardData(val data: ReadingData, val today: LocalDate, zone: ZoneId = ZoneId.systemDefault()) {
+class BoardData(val data: ReadingData, val today: LocalDate, zone: ZoneId = ZoneId.systemDefault(), val shuffle: Int = 0) {
     private val minutesByDay = data.minutesByDay
     private fun minutesOn(d: LocalDate) = minutesByDay[d.toEpochDay()] ?: 0
 
@@ -114,7 +114,8 @@ class BoardData(val data: ReadingData, val today: LocalDate, zone: ZoneId = Zone
     }
 
     fun shelf(kind: String): List<RBook> = when (kind) {
-        "random" -> data.discover
+        "random" -> if (shuffle == 0) data.discover else data.books.filter { it.progress == 0.0 && it.finishedAt == null }
+            .shuffled(kotlin.random.Random(shuffle * 7919L + today.toEpochDay())).take(6)
         "recently-added" -> data.recentlyAdded
         "pick-back-up" -> pickBackUp
         "up-next-in-series" -> upNext
