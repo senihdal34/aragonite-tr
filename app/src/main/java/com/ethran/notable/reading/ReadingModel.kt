@@ -22,7 +22,7 @@ data class RBook(
 }
 
 /** Reading sessions: page turns grouped until a gap of more than ten minutes (sessions under a minute do not count). */
-data class SessionRecords(val sessions: Int, val longestMin: Int, val avgMin: Int, val pagesPerHour: Int)
+data class SessionRecords(val sessions: Int, val longestMin: Int, val avgMin: Int, val pagesPerHour: Int, val maxPages: Int = 0)
 
 /** Every page turned, how many on the reading day of "now", and when the first one was. */
 data class PageTurns(val total: Int, val today: Int, val since: Long?)
@@ -57,7 +57,9 @@ data class ReadingData(
     /** Minutes read in each local hour of the day over the last 90 days. */
     val hours: List<Int> = List(24) { 0 },
     val records: SessionRecords? = null,
-    val pageTurns: PageTurns? = null
+    val pageTurns: PageTurns? = null,
+    /** Pages turned on each reading day (epoch day). */
+    val pagesByDay: Map<Long, Int> = emptyMap()
 ) {
     val alsoReading: List<RBook> get() = continueReading.drop(1)
     val totalBooks: Int get() = books.size

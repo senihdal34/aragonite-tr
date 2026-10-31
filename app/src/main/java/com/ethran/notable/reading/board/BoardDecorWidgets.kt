@@ -75,16 +75,11 @@ private fun HintTile(w: Int, hh: Int, title: String, hint: String, right: (@Comp
     }
 }
 
-// ============================================================ chapter line / badge / dust
+// ============================================================ chapter line / dust (the badge box is in BoardBadgeWidgets.kt)
 @Composable
 fun ChaptersWidget(c: BoardCtx, w: Int, hh: Int) {
     val ink = if (BoardColour.enabled) BoardColour.color(BoardColour.fam("chapters", c.lead).ink) else Ink.black
     HintTile(w, hh, "Next stop", "The chapter line is not available for NeoReader books yet.", { Ic("train-front", 17, ink, iconSw(2.25f)) })
-}
-
-@Composable
-fun BadgeWidget(c: BoardCtx, w: Int, hh: Int) {
-    HintTile(w, hh, "Next badge", "Badges are not available in this app.", { Ic("award", 17, BoardColour.icon("badge"), iconSw(2.25f)) })
 }
 
 /** Dust over the cover and a cobweb across its top corner, each thread drawn dark and then light so it shows on any cover. */
